@@ -7,6 +7,10 @@
         "dark": "#000",
         "light": "#fff"
     },
+    "logo": {
+        "light": "/images/tfh-logo.svg",
+        "dark": "/images/tfh-logo-dark.svg"
+    },
     "navigation": {
         "global": {
             "anchors": [
@@ -34,6 +38,17 @@
                 "pages": [
                     "pages/world-app/index"
                 ]
+            },
+            {
+                "tab": "Mini Apps",
+                "pages": [
+                    {
+                        "group": "Introduction",
+                        "pages": [
+                            "pages/mini-apps/index"
+                        ]
+                    }
+                ]
             }
         ]
     },
@@ -44,5 +59,15 @@
             "href": "https://developer.worldcoin.org",
             "target": "_blank"
         }
+    },
+    "footer": {
+        "socials": {
+            "x": "https://x.com/tfh_technology",
+            "linkedin": "https://www.linkedin.com/company/tools-for-humanity-corp",
+            "github": "https://github.com/toolsforhumanity"
+        }
+    },
+    "styling": {
+        "eyebrows": "breadcrumbs"
     }
 }
