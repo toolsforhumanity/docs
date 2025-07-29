@@ -1,0 +1,48 @@
+{
+    "$schema": "https://mintlify.com/docs.json",
+    "theme": "mint",
+    "name": "TFH Docs",
+    "colors": {
+        "primary": "#000000",
+        "dark": "#000",
+        "light": "#fff"
+    },
+    "navigation": {
+        "global": {
+            "anchors": [
+                {
+                    "anchor": "World ID",
+                    "href": "https://docs.world.org/world-id",
+                    "icon": "book-open-cover"
+                },
+                {
+                    "anchor": "World Chain",
+                    "href": "https://docs.world.org/world-chain",
+                    "icon": "slack"
+                }
+            ]
+        },
+        "tabs": [
+            {
+                "tab": "Home",
+                "pages": [
+                    "pages/index"
+                ]
+            },
+            {
+                "tab": "World App",
+                "pages": [
+                    "pages/world-app/index"
+                ]
+            }
+        ]
+    },
+    "navbar": {
+        "primary": {
+            "type": "button",
+            "label": "Developer Portal",
+            "href": "https://developer.worldcoin.org",
+            "target": "_blank"
+        }
+    }
+}
