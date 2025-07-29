@@ -34,13 +34,13 @@
             {
                 "tab": "Home",
                 "pages": [
-                    "pages/index"
+                    "index"
                 ]
             },
             {
                 "tab": "World App",
                 "pages": [
-                    "pages/world-app/index"
+                    "world-app/index"
                 ]
             },
             {
@@ -49,7 +49,7 @@
                     {
                         "group": "Introduction",
                         "pages": [
-                            "pages/mini-apps/index"
+                            "mini-apps/index"
                         ]
                     }
                 ]
