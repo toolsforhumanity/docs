@@ -11,18 +11,22 @@
         "light": "/images/tfh-logo.svg",
         "dark": "/images/tfh-logo-dark.svg"
     },
+    "favicon": {
+        "light": "/images/favicon.svg",
+        "dark": "/images/favicon-dark.svg"
+    },
     "navigation": {
         "global": {
             "anchors": [
                 {
                     "anchor": "World ID",
                     "href": "https://docs.world.org/world-id",
-                    "icon": "/images/world-id-icon.svg"
+                    "icon": "id-card-clip"
                 },
                 {
                     "anchor": "World Chain",
                     "href": "https://docs.world.org/world-chain",
-                    "icon": "/images/world-chain-icon.svg"
+                    "icon": "dice-d10"
                 }
             ]
         },
