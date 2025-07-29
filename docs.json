@@ -13,12 +13,12 @@
                 {
                     "anchor": "World ID",
                     "href": "https://docs.world.org/world-id",
-                    "icon": "book-open-cover"
+                    "icon": "/images/world-id-icon.svg"
                 },
                 {
                     "anchor": "World Chain",
                     "href": "https://docs.world.org/world-chain",
-                    "icon": "slack"
+                    "icon": "/images/world-chain-icon.svg"
                 }
             ]
         },
