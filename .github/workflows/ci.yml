@@ -1,10 +1,9 @@
-name: Content Quality Checks
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   quality-checks:
