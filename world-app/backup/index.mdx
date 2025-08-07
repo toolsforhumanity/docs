@@ -31,7 +31,7 @@ Coming soon.
 
 
 ### Factor Secrets
-Main Factors are able to derive or store _Factor Secrets_. A _Factor Secret_ is a symmetric key that is used to encrypt the <BackupEncryptionKeypair />. When decrypting the <SealedBackup />, the <BackupEncryptionKeypair /> is decrypted first with the _Factor Secret_ and then the Sealed Backup to retrieve the raw files. Each <MainFactor /> derives its _Factor Secret_ this way:
+Main Factors are able to derive or store _Factor Secrets_. A _Factor Secret_ is a key that is used to encrypt the <BackupEncryptionKeypair />. When decrypting the <SealedBackup />, the <BackupEncryptionKeypair /> is decrypted first with the _Factor Secret_ and then the Sealed Backup to retrieve the raw files. Each <MainFactor /> derives its _Factor Secret_ this way:
 
 - For Passkeys, the _Factor Secret_ is a [PRF extension key](https://www.w3.org/TR/webauthn-3/#prf-extension) which allows deriving a deterministic symmetric key.
 - For OIDC, the _Factor Secret_ is a random 32 byte sequence that is generated in the user's World App and then stored inside [Turnkey][turnkey]'s Secure Enclaves as a _Private Key_. On recovery, the Secure Enclave provably authenticates the user before providing the secret.
