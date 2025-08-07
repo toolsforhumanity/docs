@@ -40,7 +40,14 @@
             {
                 "tab": "World App",
                 "pages": [
-                    "world-app/index"
+                    "world-app/index",
+                    {
+                        "group": "Backup & Recovery",
+                        "pages": [
+                            "world-app/backup/index",
+                            "world-app/backup/advanced"
+                        ]
+                    }
                 ]
             },
             {
