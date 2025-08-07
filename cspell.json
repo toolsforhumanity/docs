@@ -7,7 +7,6 @@
     "mintlify",
     "mdx",
     "pnpm",
-    "devcontainer",
     "jsx",
     "tsx",
     "cspell",
@@ -19,12 +18,7 @@
     ".git",
     "dist",
     "build",
-    "out",
-    "coverage",
-    ".next",
-    ".vscode",
-    "*.min.js",
-    "*.min.css"
+    ".vscode"
   ],
   "ignoreRegExpList": [
     "/\\b[A-Z]{2,}\\b/g",
