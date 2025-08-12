@@ -1,0 +1,109 @@
+---
+title: "MiniKit-JS SDK"
+sidebarTitle: "Getting Started"
+description: "[MiniKit-JS](https://github.com/worldcoin/minikit-js) is our official SDK for creating mini apps that work with World App. It provides handy functions and types to make development a breeze."
+---
+
+
+
+## Quick Start
+
+The fastest way to get started is by using our template next-15 repository. Run the following command and follow the instructions to create a new mini app. For cleanliness we recommend using `pnpm` as your package manager.
+
+```bash
+npx @worldcoin/create-mini-app@latest my-first-mini-app
+```
+
+<Frame caption="Correctly running template should look like this">
+  ![Template](https://docs.world.org/_next/image?url=%2Fimages%2Fdocs%2Fmini-apps%2Fquick-start%2Ftemplate.png&w=640&q=75)
+</Frame>
+
+## Manual Installation
+
+[MiniKit-JS](https://www.npmjs.com/package/@worldcoin/minikit-js) is the core lib, framework agnostic,
+
+[MiniKit-React](https://www.npmjs.com/package/@worldcoin/minikit-react) provides hooks that make it easy to interact with the MiniKit SDK.
+
+<CodeGroup>
+```bash minikit-js
+pnpm install @worldcoin/minikit-js
+```
+
+```bash minikit-react
+pnpm install @worldcoin/minikit-react
+```
+</CodeGroup>
+
+Or use a CDN like [jsdelivr](https://www.jsdelivr.com/package/npm/@worldcoin/minikit-js), for inline HTML, make sure to fill in the version.
+
+```bash
+<script>
+  import { MiniKit } from "https://cdn.jsdelivr.net/npm/@worldcoin/minikit-js@[version]/+esm"
+</script>
+```
+
+## Usage
+
+<Steps>
+  <Step title="Wrap your root with the MiniKitProvider component.This provides the MiniKit object to your app.">
+
+
+```bash src/index.tsx
+import { MiniKitProvider } from '@worldcoin/minikit-js/minikit-provider';
+export default async function Root({
+	children,
+}: Readonly<{
+	children: React.ReactNode
+}>) {
+	return (
+		<html lang="en">
+			<MiniKitProvider>
+				<body className={inter.className}>{children}</body>
+			</MiniKitProvider>
+		</html>
+	)
+}
+```
+
+  </Step>
+  <Step title="Check if MiniKit is installed and ready to use">
+    `MiniKit.isInstalled()` will only return true if the app is opened and properly initialized inside the World App. This is useful to distinguish between a user opening your app in the browser or in the World App.
+
+```bash
+// ...
+console.log(MiniKit.isInstalled())
+```
+
+  </Step>
+</Steps>
+
+## Build with AI
+
+We have generated a [llms-full.txt](https://docs.world.org/llms-full.txt) file that converts all our documentation into a single markdown document following the [https://llmstxt.org/](https://llmstxt.org/) standard.
+
+## Template Repositories
+
+The following template repositories are also available:
+
+<CardGroup>
+<Card href="https://github.com/new?template_name=minikit-js-template&template_owner=worldcoin" icon="link" horizontal>
+  Vanilla JS (using a CDN) template featuring a simple backend for verifications
+</Card>
+<Card href="https://github.com/worldcoin/minikit-web3-example" icon="link" horizontal>
+  Wallet Auth + Send Transaction example
+</Card>
+
+<Card href="https://github.com/wlding-blocks/wld-mini-apps-101" icon="link" horizontal>
+  Community example – Wallet Auth using JWT
+</Card>
+
+<Card href="https://github.com/supercorp-ai/minikit-wallet-auth-next-auth" icon="link" horizontal>
+  Community example – Wallet Auth using NextAuth
+</Card>
+</CardGroup>
+
+Otherwise, continue below with the installation instructions.
+
+<Info>
+  Watch a video tutorial [here](https://www.youtube.com/watch?v=QJ0htHP6lb0).
+</Info>

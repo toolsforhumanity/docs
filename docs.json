@@ -1,77 +1,173 @@
 {
-    "$schema": "https://mintlify.com/docs.json",
-    "theme": "mint",
-    "name": "TFH Docs",
-    "colors": {
-        "primary": "#000000",
-        "dark": "#000",
-        "light": "#fff"
-    },
-    "logo": {
-        "light": "/images/tfh-logo.svg",
-        "dark": "/images/tfh-logo-dark.svg"
-    },
-    "favicon": {
-        "light": "/images/favicon.svg",
-        "dark": "/images/favicon-dark.svg"
-    },
-    "navigation": {
-        "global": {
-            "anchors": [
-                {
-                    "anchor": "World ID",
-                    "href": "https://docs.world.org/world-id",
-                    "icon": "id-card-clip"
-                },
-                {
-                    "anchor": "World Chain",
-                    "href": "https://docs.world.org/world-chain",
-                    "icon": "dice-d10"
-                }
-            ]
-        },
-        "tabs": [
-            {
-                "tab": "Home",
-                "pages": [
-                    "index"
-                ]
-            },
-            {
-                "tab": "World App",
-                "pages": [
-                    "world-app/index"
-                ]
-            },
-            {
-                "tab": "Mini Apps",
-                "pages": [
-                    {
-                        "group": "Introduction",
-                        "pages": [
-                            "mini-apps/index"
-                        ]
-                    }
-                ]
-            }
-        ]
-    },
-    "navbar": {
-        "primary": {
-            "type": "button",
-            "label": "Developer Portal",
-            "href": "https://developer.worldcoin.org",
-            "target": "_blank"
-        }
-    },
-    "footer": {
-        "socials": {
-            "x": "https://x.com/tfh_technology",
-            "linkedin": "https://www.linkedin.com/company/tools-for-humanity-corp",
-            "github": "https://github.com/toolsforhumanity"
-        }
-    },
-    "styling": {
-        "eyebrows": "breadcrumbs"
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "aspen",
+  "name": "World Docs",
+  "colors": {
+    "primary": "#2c2c2c",
+    "light": "#f9f9f7",
+    "dark": "#2c2c2c"
+  },
+  "favicon": "/favicon.svg",
+  "background": {
+    "color": {
+      "light": "#f9f9f7"
     }
+  },
+  "appearance": {
+    "default": "light"
+  },
+"fonts": {
+    "heading":{
+      "family": "TWK Lausanne",
+      "source": "https://world.org/fonts/TWKLausanne-300.woff2",
+      "format": "woff2"
+    },
+    "body":{
+      "family": "TWK Lausanne",
+      "source": "https://world.org/fonts/TWKLausanne-300.woff2",
+      "format": "woff2"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Home",
+        "groups": [
+          {
+            "group": " ",
+            "pages": ["index"]
+          }
+        ]
+      },
+      {
+        "tab": "Mini Apps",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": ["main"]
+          },
+          {
+            "group": "Quick Start",
+            "pages": [
+              "mini-apps/quick-start/installing",
+              "mini-apps/quick-start/commands"
+            ]
+          },
+           {
+            "group": "Authentication",
+            "pages": ["mini-apps/authentication/main"]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "mini-apps/commands/verify"
+            ]
+          },
+          {
+            "group": "Technical Reference",
+            "pages": [
+              "mini-apps/reference/init"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "External Integrations",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": ["world-id","world-id/concepts"]
+          },
+          {
+            "group": "ID Kit",
+            "pages": [
+              "world-id/id/getting-started",
+              "world-id/id/web-react"
+            ]
+          },
+          {
+            "group": "Sign in with World ID",
+            "pages": [
+              "world-id/sign-in/getting-started"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "World Chain",
+        "groups": [
+          {
+            "group": "About World Chain",
+            "pages": ["world-chain","world-chain/quick-start/why"]
+          },
+          {
+            "group": "Using World Chain",
+            "pages": [
+              "world-chain/quick-start/fund-wallet"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+
+        {
+          "anchor": "Support",
+          "href": "https://support.world.org/hc/en-us",
+          "icon": "headset"
+        },
+        {
+          "anchor": "Blog",
+          "href": "https://world.org/blog",
+          "icon": "newspaper"
+        },
+         {
+          "anchor": "Discord",
+          "href": "https://discord.com/invite/worldnetwork",
+          "icon": "discord"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://world.org"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Explore Apps",
+        "href": "https://world.org/ecosystem"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/worldcoin/world-id-docs/"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/worldcoin",
+      "linkedin": "https://www.linkedin.com/company/worldofficial/",
+      "github": "https://github.com/worldcoin",
+      "discord": "https://discord.com/invite/worldnetwork",
+      "telegram": "https://t.me/worldnetworkofficial",
+      "youtube": "https://www.youtube.com/@worldnetworkofficial",
+      "instagram": "https://www.instagram.com/world"
+    }
+  }
 }
