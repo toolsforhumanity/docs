@@ -1,0 +1,8 @@
+---
+title: "Cryptography"
+description: "Cryptography reference for World App."
+---
+
+## CSPRNG and Randomness Source
+
+Different operations in World App require a [CSPRNG](https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator) (Cryptographically Secure Pseudo-Random Number Generator). For all of these operations, we use the standard OS-provided CSPRNG. Generally most cryptographically sensitive operations in World App run from [Bedrock](/world-app/bedrock) foundational library. Bedrock accomplishes this by using the `OsRng` from the [rand](https://docs.rs/rand/latest/rand/rngs/struct.OsRng.html) crate. Under the hood, `OsRng` uses `getrandom` which uses the OS-provided CSPRNG (e.g. `getrandom(2)` syscall on Android (Linux), `SecRandomCopyBytes` on iOS).
