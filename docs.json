@@ -46,6 +46,7 @@
                         "group": "Backup & Recovery",
                         "pages": [
                             "world-app/backup/index",
+                            "world-app/backup/structure-and-sync",
                             "world-app/backup/advanced"
                         ]
                     },
