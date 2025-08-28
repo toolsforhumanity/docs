@@ -61,13 +61,13 @@ sequenceDiagram
 
 #### SponsorUserOperation
 
-To request TFH sponsorship and fully craft an ERC-4337 `UserOperation`, the RPC exposes `wa_sponsorUserOperation`. It returns paymaster data and gas parameters (e.g., `paymaster`, `paymasterData`, `preVerificationGas`, `verificationGasLimit`, `callGasLimit`, fee caps). Bedrock appends `paymasterAndData` client-side before signing and submission.
+To request TFH sponsorship and fully craft an ERC-4337 `UserOperation`, the RPC exposes `wa_sponsorUserOperation`. It returns paymaster data and gas parameters (e.g., `paymaster`, `paymasterData`, `preVerificationGas`, `verificationGasLimit`, `callGasLimit`, fee caps).
 
 ### Nonces
 
 With ERC-4337, nonce handling is more flexible. World App transactions define unique nonces per operation while using a `0` sequence for most flows. This reduces latency (no extra on-chain nonce read) and allows safe parallelism.
 
-This is how nonces are constructed (following [RIP-7712](https://docs.erc4337.io/core-standards/rip-7712)):
+This is how nonces are constructed (following [RIP-7712](https://docs.erc4337.io/core-standards/rip-7712))
 
 To mitigate users accidentally submitting duplicate transactions during high congestion (e.g., Alice pays Bob $1, realizes the transaction is pending after a few minutes, gets frustrated and submits a second $1 payment; when gas fees drop, both transactions execute), we take the following actions:
 
