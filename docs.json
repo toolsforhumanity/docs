@@ -41,11 +41,19 @@
                 "tab": "World App",
                 "pages": [
                     "world-app/index",
+                    "world-app/bedrock",
                     {
                         "group": "Backup & Recovery",
                         "pages": [
                             "world-app/backup/index",
+                            "world-app/backup/structure-and-sync",
                             "world-app/backup/advanced"
+                        ]
+                    },
+                    {
+                        "group": "Advanced",
+                        "pages": [
+                            "world-app/cryptography"
                         ]
                     }
                 ]
