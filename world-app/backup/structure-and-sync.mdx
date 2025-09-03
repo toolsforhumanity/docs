@@ -10,29 +10,78 @@ import { RootKey, PersonalCustodyPackage } from "/snippets/terms.mdx";
 
 Syncing is the operation by which a user **updates** their backup from an authenticated device. A backup sync (`/sync`) is unidirectional, with a mobile client providing an update when new files are included in the backup. The client only fetches remote updates in certain scenarios (see below).
 
-
-## Unsealed Backup: Internal Structure
-
 The <UnsealedBackup /> contains the encoded <RootKey /> for World App plus a set of raw files. The source of truth is the `BackupFormat` structure in [Bedrock](https://github.com/worldcoin/bedrock). The files back up all required self-custodial information that a user holds in their World App. In particular, today this is the user's World ID <PersonalCustodyPackage />s (or PCPs).
 
 <Note>One of the challenges the system faces is that because the backup is end-to-end encrypted, the **Backup Service** cannot enforce any type of rules that prevent accidental data loss. For example, consider Client M in which the User gets their passport verified and hence obtains a PCP. If the user is also authenticated on Client N, and a backup sync is triggered from Client N, the PCP would be removed from the backup because Client N does not have it.</Note>
 
-1. To determine when a file should be included in the backup, a module in World App will instruct the `ManifestManager` that it requires a file to be backed up. _For example, the `personal_custody` module (currently in Oxide) which handles the user's Orb verification will instruct the `ManifestManager` to include the user's Orb PCP in the backup after a user verifies. Without this, the user would not be able to make use of their Orb credential._
-1. The `ManifestManager` is responsible for creating and maintaining the set of `BackupFileManifest`s. Each manifest contains the required information so that the backup module can craft the required <SealedBackup /> for updates.
-    ```rust
-    pub struct V0BackupFileManifest {
-        file_path: String,
-        manifest_last_updated_at: DateTime<Utc>,
-        max_file_size_kb: u64,
-        designator: BackupFileDesignator,
-        checksum: [u8; 32],
+
+## Backup State Management
+
+The backup system uses a **manifest-based approach** to prevent accidental data loss during syncs. Each backup contains a manifest that describes its contents and enforces proper versioning.
+
+### The Manifest
+
+Each backup ships with a manifest that describes the backup's contents. The manifest acts as a versioned ledger, ensuring clients always start from the current state ($m_t$) and perform incremental updates to produce the next state ($m_{t+1}$).
+
+```json
+{
+  "version": 0,
+  "previous_manifest_hash": "0x1234567890000000000000000000000",
+  "files": [
+    {
+      "checksum": "0x1234567890000000000000000000000",
+      "file_path": "/personal_custody/unpack/me/here",
+      "designator": "orb_pcp"
     }
-    ```
-1. Other modules call `ManifestManager::store_file` and `ManifestManager::remove_file` to add or remove files from the backup. 
+  ]
+}
+```
 
-Removing a file requires specifying the checksum to be removed.
+Each state is defined as the `blake3` hash of the manifest file (raw bytes).
 
-Symlink to prevent accidental data loss.
+### Responsibilities
 
+- **Client**: Bears sole responsibility for performing backup updates based on the current state. Must verify it's operating on the latest manifest before making changes.
+- **Server**: Maintains a pointer to the current state hash. Validates state transitions during updates but cannot inspect encrypted contents.
 
-Manifesta re needed because the backup updates are sent encrypted......
+### ManifestManager API (Client-Side)
+
+The `ManifestManager` provides controlled access to backup modifications. Before any operation, it fetches the remote state hash to ensure consistency:
+
+- If the local manifest is missing → prompts user to authenticate and download the remote state
+- If `remote_manifest_hash == local_manifest_hash` → proceeds with updates
+- If hashes differ → prompts user to authenticate and download the remote state
+
+#### Available Methods
+
+- **`store_file(designator, filePath)`** - Adds a new file to the backup. Verifies path uniqueness, computes checksum, triggers pack & upload.
+- **`list_files(designator)`** - Returns all entries for the given designator.
+- **`replace_all_files_for_designator(designator, newFilePath)`** - Replaces all existing entries for a designator with a new file.
+- **`remove_file(filePath)`** - Removes a file entry from the manifest.
+
+### Pack & Upload Process
+
+When building and uploading a new backup version:
+
+1. **Validate local manifest** - Error if missing; prompt to download remote.
+2. **Build unsealed backup** - Collect all files from the manifest. Verify checksums match for every file.
+3. **Submit sealed backup** - Include updated manifest inside. Report current and new manifest hashes to backend.
+4. **Backend validation** - Verifies current hash matches recorded state before accepting update.
+
+### Download & Unpack Process
+
+When downloading and unpacking a remote backup:
+
+1. **Decrypt sealed backup** - Extract and replace local manifest unconditionally.
+2. **Unpack files** - Write each file to its declared `filePath`. Replace existing files (log errors for checksum mismatches).
+
+This approach is safe because clients enforce explicit state transitions starting from the current manifest.
+
+### Startup Verification
+
+On app startup, the client fetches the remote state checksum. If it differs from the local manifest, the user is prompted to authenticate and download the remote backup.
+
+### Additional Safety Measures
+
+- **Backend short-lived locks** - Prevents narrow race windows during updates, only one update at a time. Authoritative enforcement remains via manifest hash validation.
+- **Hard links (Android Only)** - Hard links are created under `/backup/files/{checksum}` to guard against accidental deletion of source files. Links are removed on file removal.
