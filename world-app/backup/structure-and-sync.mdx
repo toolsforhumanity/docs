@@ -21,7 +21,7 @@ The backup system uses a **manifest-based approach** to prevent accidental data 
 
 ### The Manifest
 
-Each backup ships with a manifest that describes the backup's contents. The manifest acts as a versioned ledger, ensuring clients always start from the current state ($m_t$) and perform incremental updates to produce the next state ($m_{t+1}$).
+Each backup ships with a manifest that describes the backup's contents. The manifest serves as a versioned ledger, ensuring clients always begin from the current state ($m_t$) and apply incremental updates to produce the next state ($m_{t+1}$).
 
 ```json
 {
@@ -75,7 +75,7 @@ When downloading and unpacking a remote backup:
 1. **Decrypt sealed backup** - Extract and replace local manifest unconditionally.
 2. **Unpack files** - Write each file to its declared `filePath`. Replace existing files (log errors for checksum mismatches).
 
-This approach is safe because clients enforce explicit state transitions starting from the current manifest.
+This approach is safe because clients enforce explicit state transitions based on the current manifest.
 
 ### Startup Verification
 
