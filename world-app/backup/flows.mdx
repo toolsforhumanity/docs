@@ -21,7 +21,7 @@ flowchart TD
     D --> E{"Deleting an OIDC factor?"}
     E -- Yes --> F{"Deleting the last OIDC factor?"}
     F -- Yes --> G["Delete Turnkey Account (ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION) with Sync Factor"]
-    F -- No --> H["Delete OIDC Accouint from Turnkey (ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS) with Sync Factor"]
+    F -- No --> H["Delete OIDC account from Turnkey (ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS) with Sync Factor"]
     G --> EndSuccess
     H --> EndSuccess
 
@@ -41,7 +41,7 @@ flowchart TD
     N -- Yes --> Q{"User has Passkey?"}
     Q -- No --> EndSuccess
     Q -- Yes --> O["Create new Sync Factor in Turnkey Account using Passkey"]
-    O --> P["Delete OIDC Accouint from Turnkey (ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS) with NEW Sync Factor"]
+    O --> P["Delete OIDC account from Turnkey (ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS) with NEW Sync Factor"]
     P --> EndSuccess
 
     O -. fail .-> Fail
