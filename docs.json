@@ -1,92 +1,87 @@
 {
-    "$schema": "https://mintlify.com/docs.json",
-    "theme": "mint",
-    "name": "TFH Docs",
-    "colors": {
-        "primary": "#000000",
-        "dark": "#000",
-        "light": "#fff"
-    },
-    "logo": {
-        "light": "/images/tfh-logo.svg",
-        "dark": "/images/tfh-logo-dark.svg"
-    },
-    "favicon": {
-        "light": "/images/favicon.svg",
-        "dark": "/images/favicon-dark.svg"
-    },
-    "navigation": {
-        "global": {
-            "anchors": [
-                {
-                    "anchor": "World ID",
-                    "href": "https://docs.world.org/world-id",
-                    "icon": "id-card-clip"
-                },
-                {
-                    "anchor": "World Chain",
-                    "href": "https://docs.world.org/world-chain",
-                    "icon": "dice-d10"
-                }
-            ]
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "TFH Docs",
+  "colors": {
+    "primary": "#000000",
+    "dark": "#000",
+    "light": "#fff"
+  },
+  "logo": {
+    "light": "/images/tfh-logo.svg",
+    "dark": "/images/tfh-logo-dark.svg"
+  },
+  "favicon": {
+    "light": "/images/favicon.svg",
+    "dark": "/images/favicon-dark.svg"
+  },
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "World ID",
+          "href": "https://docs.world.org/world-id",
+          "icon": "id-card-clip"
         },
-        "tabs": [
-            {
-                "tab": "Home",
-                "pages": [
-                    "index"
-                ]
-            },
-            {
-                "tab": "World App",
-                "pages": [
-                    "world-app/index",
-                    "world-app/bedrock",
-                    {
-                        "group": "Backup & Recovery",
-                        "pages": [
-                            "world-app/backup/index",
-                            "world-app/backup/structure-and-sync",
-                            "world-app/backup/advanced"
-                        ]
-                    },
-                    {
-                        "group": "Advanced",
-                        "pages": [
-                            "world-app/cryptography"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tab": "Mini Apps",
-                "pages": [
-                    {
-                        "group": "Introduction",
-                        "pages": [
-                            "mini-apps/index"
-                        ]
-                    }
-                ]
-            }
+        {
+          "anchor": "World Chain",
+          "href": "https://docs.world.org/world-chain",
+          "icon": "dice-d10"
+        }
+      ]
+    },
+    "tabs": [
+      {
+        "tab": "Home",
+        "pages": ["index"]
+      },
+      {
+        "tab": "World App",
+        "pages": [
+          "world-app/index",
+          "world-app/bedrock",
+          {
+            "group": "Backup & Recovery",
+            "pages": [
+              "world-app/backup/index",
+              "world-app/backup/structure-and-sync",
+              "world-app/backup/flows",
+              "world-app/backup/advanced"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": ["world-app/cryptography"]
+          }
         ]
-    },
-    "navbar": {
-        "primary": {
-            "type": "button",
-            "label": "Developer Portal",
-            "href": "https://developer.worldcoin.org",
-            "target": "_blank"
-        }
-    },
-    "footer": {
-        "socials": {
-            "x": "https://x.com/tfh_technology",
-            "linkedin": "https://www.linkedin.com/company/tools-for-humanity-corp",
-            "github": "https://github.com/toolsforhumanity"
-        }
-    },
-    "styling": {
-        "eyebrows": "breadcrumbs"
+      },
+      {
+        "tab": "Mini Apps",
+        "pages": [
+          {
+            "group": "Introduction",
+            "pages": ["mini-apps/index"]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Developer Portal",
+      "href": "https://developer.worldcoin.org",
+      "target": "_blank"
     }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/tfh_technology",
+      "linkedin": "https://www.linkedin.com/company/tools-for-humanity-corp",
+      "github": "https://github.com/toolsforhumanity"
+    }
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs"
+  }
 }

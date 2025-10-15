@@ -1,0 +1,82 @@
+---
+title: "Backup Flows"
+sidebarTitle: "Flows"
+description: "Detailed documentation on the key flows related to the World App backup system."
+---
+
+import { MainFactor } from "/snippets/backup/terms.mdx";
+
+## BF-7. Factor Deletion
+- This flow is triggered when the user deletes a <MainFactor /> from the UI.
+- Sync Factors are not manually removed by the user. This is usually done through other flows (e.g. when logging out).
+- Currently, Passkeys are enrolled into Turnkey to provide a fallback mechanism in case a Sync Factor is no longer available. When the requested operation cannot be completed with the Sync Factor (see `PUBLIC_KEY_NOT_FOUND` error), the client will use the Passkey to execute the operation instead.
+- **Transitory**: Currently, removing a Passkey factor while there is still an OIDC factor is not supported. This is because a Passkey factor is required to manage other factors (restriction on `backup-service` when adding other factors) and the Passkey is used to recover access to Turnkey should the Sync Factor fail.
+- **Future Note**: The current flow assumes that Turnkey is only used for OIDC Factors. This may change in the future (e.g. to support non-PRF Passkeys).
+
+```mermaid
+flowchart TD
+    A{"Removing the last Main factor?"} -- Yes --> EndDelete(["Delete the backup: BF-8"])
+    A -- No --> C["backup-service: /delete-factor/challenge/keypair"]
+    C --> D["backup-service: /delete-factor with factorId with Sync Factor"]
+    D --> E{"Deleting an OIDC factor?"}
+    E -- Yes --> F{"Deleting the last OIDC factor?"}
+    F -- Yes --> G["Delete Turnkey Account (ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION) with Sync Factor"]
+    F -- No --> H["Delete OIDC account from Turnkey (ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS) with Sync Factor"]
+    G --> EndSuccess
+    H --> EndSuccess
+
+    E -- No -->I{"Deleting iCloud Keychain?"}
+    I -- No --> EndSuccess
+    I -- Yes --> J["Delete keypair from Keychain"]
+    J --> EndSuccess(["End: Show Success"])
+    
+    G .- fail .-> K{Failed with PUBLIC_KEY_NOT_FOUND?}
+    K -- No --> Fail["Retry 2 times with back-off. Log errors. After max retries, continue."]
+    K -- Yes --> L{"User has Passkey?"}
+    L -- Yes --> M["Delete Turnkey Account (ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION) with Main Factor (Passkey)"]
+    L -- No --> EndSuccess
+    M --> EndSuccess
+
+    H -. fail .-> N{Failed with PUBLIC_KEY_NOT_FOUND?}
+    N -- Yes --> Q{"User has Passkey?"}
+    Q -- No --> EndSuccess
+    Q -- Yes --> O["Create new Sync Factor in Turnkey Account using Passkey"]
+    O --> P["Delete OIDC account from Turnkey (ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS) with NEW Sync Factor"]
+    P --> EndSuccess
+
+    O -. fail .-> Fail
+    P -. fail .-> Fail
+
+    C -. fail .-> EndError(["End: Show Failure to User"])
+    D -. fail .-> EndError
+```
+
+## BF-8. Backup Deletion
+- Backup Deletion is triggered from either:
+    - The user removing the last <MainFactor /> (see BF-7).
+    - The user requesting full account deletion of World App.
+- Backup Deletion will clear all data related to the backup.
+
+
+```mermaid
+flowchart TD
+    A["backup-service: /delete-backup/challenge/keypair with Sync Factor"] --> B["backup-service: /delete-backup"]
+    B --> C{"User has Turnkey account?"}
+    C -- Yes --> D["Delete Turnkey Account (ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION) with Sync Factor"]
+    C -- No --> E["Clear Bedrock Data"]
+    D --> E
+    E --> F["Clear local keypair for Sync Factor"]
+    F --> G{"User on iOS and has iCloud Keychain Factor"}
+    G -- Yes --> H["Delete iCloud Keychain Factor (Main)"]
+    G -- No --> EndSuccess(["End: Show Success"])
+    H --> EndSuccess
+    
+    
+    D -. fail .-> Fail["Retry 2 times with back-off. Log errors. After max retries, continue."]
+    F -. fail .-> Fail
+    E -. fail .-> Fail
+    H -. fail .-> Fail
+
+    A -. fail .-> EndError(["End: Show Failure to User"])
+    B -. fail .-> EndError
+```
