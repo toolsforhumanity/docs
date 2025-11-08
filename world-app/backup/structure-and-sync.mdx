@@ -84,4 +84,3 @@ On app startup, the client fetches the remote state checksum. If it differs from
 ### Additional Safety Measures
 
 - **Backend short-lived locks** - Prevents narrow race windows during updates, only one update at a time. Authoritative enforcement remains via manifest hash validation.
-- **Hard links (Android Only)** - Hard links are created under `/backup/files/{checksum}` to guard against accidental deletion of source files. Links are removed on file removal.
