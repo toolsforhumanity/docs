@@ -4,9 +4,52 @@ sidebarTitle: "Components & Parties"
 description: "The parties and their respective components and responsibilities within the backup system."
 ---
 
+import { SyncFactor, MainFactor } from "/snippets/backup/terms.mdx";
+
 # Backup Service
 
 Details coming soon.
 
 # Turnkey
 
+FIXME: Add intro
+
+
+<Note>All short-lived keys used with Turnkey are set for a duration of **5 minutes** unless otherwise specified.</Note>
+
+
+## Turnkey User Setup
+
+<Info>The initial release of this feature relied on a slightly different user setup. Some early World App Users will have a slightly different setup (with the Root Quorum being `auth_user_main` solely) before a migration is introduced.</Info>
+
+1. **Ephemeral**. A `root_user_genesis` user is created by World App's backend.
+  - This user is a root user.
+  - This user is created with a short-lived keypair provided by the client.
+  - The user is also registered with a fallback `0` key (`Curve25519`) as Turnkey requires all users to have an always valid authenticator or keypair.
+  - This user is immediately deleted by the client upon setup of `auth_user_main`
+2. An `auth_user_main` is created by the client. This user represents how the World App User primarily authenticates, and it's authenticated with the <MainFactor />s.
+  - This user has a permission policy with explicit `ALLOW` for all activities (`*`).
+  - The user's passkey and OIDC factors are added to this user for authentication.
+  
+  ```json
+  {
+    "effect": "EFFECT_ALLOW",
+    "consensus": "approvers.any(user, user.id == '<authUserMainId>')",
+    "condition": "*"
+  }
+  ```
+3. A `sync_factor_user` is created by the client. This user represents user interactions operated with their <SyncFactor />s.
+  - A long lived keypair is added per-<SyncFactor /> to this user. A user will have a unique <SyncFactor /> per device.
+  - This user has permission to perform certain deletion operations. This enables the user to perform management operations without requiring additional authentication, as well as providing a recovery path for when access to <MainFactor />s is lost. For example, it's used to remove an OIDC factor without additional user interaction, or to delete the user's Turnkey account altogether.
+
+  ```json
+  {
+    "effect": "EFFECT_ALLOW",
+    "consensus": "approvers.any(user, user.id == '<syncFactorUserId>')",
+    "condition": "activity.type == 'ACTIVITY_TYPE_DELETE_AUTHENTICATORS' || activity.type == 'ACTIVITY_TYPE_DELETE_PRIVATE_KEYS' || activity.type == 'ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS' || activity.type == 'ACTIVITY_TYPE_DELETE_API_KEYS' || activity.type == 'ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION'"
+  }
+  ```
+4. In addition to the user setup, Turnkey has the concept of a [Root Quorum](https://docs.turnkey.com/concepts/users/root-quorum). When the Root Quorum is met, any action does not go through the Policy Engine and is directly approved. For World App, the Root Quorum is generally not used. To prevent misuse, the Root Quorum is set to 2-of-2 with both the `auth_user_main` and `sync_factor_user` being part of the quorum. This ensures that:
+  - `sync_factor_user` can update `auth_user_main` as granted by its policy (i.e. delete OAuth providers or authenticators).
+  - `sync_factor_user` cannot take any action not explicitly granted by the policy, as `sync_factor_user` cannot reach Root Quorum on its own. Or in other words, Root Quorum still requires approval by `auth_user_main`.
+  - A World App User can always update their `sync_factor_user` using `auth_user_main` in case of loss of all devices.
