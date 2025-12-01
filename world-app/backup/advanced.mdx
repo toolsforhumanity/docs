@@ -4,6 +4,31 @@ sidebarTitle: "Advanced Topics"
 description: "Internal advanced technical reference for the backup system."
 ---
 
+import { SyncFactor, MainFactor } from "/snippets/backup/terms.mdx";
+
 ## Encryption
 
 All encryption operations use libsodium's asymmetric [sealed_box](https://doc.libsodium.org/public-key_cryptography/sealed_boxes) primitive through the [crypto_box](https://crates.io/crates/crypto_box) crate. A randomness source is required for sealed boxes to generate ephemeral key pairs for sealing. See [Cryptography](/world-app/cryptography) for more details on the randomness source.
+
+
+## Advanced Edge Cases
+
+### 1. Multiple Device Sync
+
+A user may be logged in multiple devices at the same time. When one of the devices syncs a new file, this file needs to be retrieved in the other devices. This cannot be done in the background because for security reasons, the <SyncFactor /> is not authorized to retrieve the user's backup, nor has any secret material for decryption. The client detects it needs to update its backup using the manifest hashes (see [Backup Sync & Internal Structure](/world-app/backup/structure-and-sync)). When an update is required, the client prompts the user to authenticate with a <MainFactor /> and download the updated remote backup.
+
+Importantly, whenever a client tries to sync, the backup service will help the client ensure it can only perform updates to the backup if it is operating on the latest state. This helps prevent accidental data loss.
+
+### 2. Unauthorized Device
+
+At a point in time, it is possible a device becomes unauthorized to manage a user's backup. This means that the device's <SyncFactor /> is no longer authorized with either or both Components. With Turnkey, this can be seen when receiving a `PUBLIC_KEY_NOT_FOUND` error and with the backup service when receiving an `unauthorized_factor` error (if the right `backup_id` is provided in the request). This can occur in some edge case scenarios:
+- The user is authenticated in multiple devices and deletes and recreates the entire backup. Other authenticated devices become unauthorized.
+- The user loses their <SyncFactor />.
+- (Future). The user explicitly unauthorizes a different device.
+
+
+The remediation path for this case is to use a <MainFactor /> to register a new <SyncFactor />. In particular, there is explicit handling in these scenarios:
+1. When creating a backup if the `backup_account_id_already_exists` error is received, the client prompts the user to authenticate with a <MainFactor /> and register a new <SyncFactor /> (see **[BF-1](/world-app/backup/flows#bf-1-backup-creation)**).
+2. When fetching metadata if the `unauthorized_factor` error is received, the client prompts the user to authenticate with a <MainFactor /> and register a new <SyncFactor />. If on the other hand, a `backup_does_not_exist` error is received, the client knows the backup has been deleted by the user and will update its local state accordingly.
+3. When deleting a factor if the `PUBLIC_KEY_NOT_FOUND` error is received from Turnkey, the client prompts the user to authenticate with a <MainFactor /> to register a new <SyncFactor /> and retry their operation (see **[BF-7](/world-app/backup/flows#bf-7-factor-deletion)**).
+    <Note>It's not necessary to handle error cases on factor addition/deletion with the backup service because a `/retrieve-metadata` call always preceeds this.</Note>

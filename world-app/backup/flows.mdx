@@ -6,7 +6,10 @@ description: "Detailed documentation on the key flows related to the World App b
 
 import { MainFactor } from "/snippets/backup/terms.mdx";
 
-## BF-7. Factor Deletion
+## 1. Backup Creation
+
+
+## 7. Factor Deletion
 - This flow is triggered when the user deletes a <MainFactor /> from the UI.
 - Sync Factors are not manually removed by the user. This is usually done through other flows (e.g. when logging out).
 - Currently, Passkeys are enrolled into Turnkey to provide a fallback mechanism in case a Sync Factor is no longer available. When the requested operation cannot be completed with the Sync Factor (see `PUBLIC_KEY_NOT_FOUND` error), the client will use the Passkey to execute the operation instead.
@@ -51,7 +54,7 @@ flowchart TD
     D -. fail .-> EndError
 ```
 
-## BF-8. Backup Deletion
+## 8. Backup Deletion
 - Backup Deletion is triggered from either:
     - The user removing the last <MainFactor /> (see BF-7).
     - The user requesting full account deletion of World App.

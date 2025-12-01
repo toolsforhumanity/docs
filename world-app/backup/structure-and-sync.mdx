@@ -17,7 +17,7 @@ The <UnsealedBackup /> contains the encoded <RootKey /> for World App plus a set
 
 ## Backup State Management
 
-The backup system uses a **manifest-based approach** to prevent accidental data loss during syncs. Each backup contains a manifest that describes its contents and enforces proper versioning.
+The backup system uses a **manifest-based approach** to prevent accidental data loss during syncs (e.g. Device A adds a file Y, when Device B tries to add file Z it doesn't know about file Y and the updated backup would not contain file Y, accidentally removing it). Each backup contains a manifest that describes its contents and enforces proper versioning.
 
 ### The Manifest
 
