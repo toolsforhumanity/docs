@@ -39,8 +39,8 @@ FIXME: Add intro
   }
   ```
 3. A `sync_factor_user` is created by the client. This user represents user interactions operated with their <SyncFactor />s.
-  - A long lived keypair is added per-<SyncFactor /> to this user. A user will have a unique <SyncFactor /> per device.
-  - This user has permission to perform certain deletion operations. This enables the user to perform management operations without requiring additional authentication, as well as providing a recovery path for when access to <MainFactor />s is lost. For example, it's used to remove an OIDC factor without additional user interaction, or to delete the user's Turnkey account altogether.
+  - A long lived keypair is added per-<SyncFactor /> to this user. A user will have a unique <SyncFactor /> per device. Each <SyncFactor /> registers a different keypair with the same `sync_factor_user` in Turnkey.
+  - This user has permission to perform certain deletion operations. This enables the user to perform management operations without requiring additional authentication. For example, it's used to remove an OIDC factor without additional user interaction, or to delete the user's Turnkey account altogether.
 
   ```json
   {
