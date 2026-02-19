@@ -12,7 +12,7 @@
     "cspell",
     "spellcheck",
     "pimlico",
-    "bdrock"
+    "bdrck"
   ],
   "ignorePaths": [
     "node_modules",
