@@ -41,8 +41,8 @@
           "world-app/index",
           "world-app/bedrock",
           {
-            "group": "Transactions",
-            "pages": ["world-app/transactions/index"]
+            "group": "Wallet",
+            "pages": ["world-app/transactions"]
           },
           {
             "group": "Backup & Recovery",
