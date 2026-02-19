@@ -142,8 +142,8 @@ Example:
 
 | Offset | Size | Field         | Description                                                                                                     |
 | ------ | ---- | ------------- | --------------------------------------------------------------------------------------------------------------- |
-| 0      | 1 B  | `typeId`      | Stable `TransactionType` enum (1–255). `0x00` reserved for legacy v0 nonces.                                    |
-| 1–5    | 5 B  | `magic`       | Constant `0x626472636b` (`"bdrck"`). Distinguishes Bedrock-built operations; collision probability ≈ 9.1×10⁻¹³. |
+| 0      | 1 B  | `typeId`      | Stable [`TransactionType`](https://github.com/worldcoin/bedrock/blob/main/bedrock/src/smart_account/nonce.rs#L18) enum (1–255). `0x00` reserved for legacy v0 nonces.                                    |
+| 1–5    | 5 B  | `magic`       | Constant `0x626472636b` (`"bdrck"`). Distinguishes Bedrock-built operations; collision probability $P = \frac{1}{2^{40}} ≈ 9.1 × 10^{-13}$. |
 | 6      | 1 B  | `instruction` | Reserved bitfield (currently `0`). Used later by the indexer.                                                   |
 | 7–16   | 10 B | `subtype`     | Transaction-type metadata (e.g., first 10 bytes of hashed `miniAppId`). Parsed per `typeId`.                    |
 | 17–23  | 7 B  | `random`      | 56 bits of entropy; collision risk for 1M tx in a bucket ≈ 0.0007%.                                             |
@@ -163,5 +163,4 @@ Example:
 ### Wallet Upgrades
 
 - Safe accounts must be on Safe v1.4.0 with the 4337 module enabled; otherwise, `wa_sponsorUserOperation` simulations revert.
-- On every app launch we call `/world-chain`, which now returns `requiresUpgrade`. If `true`, the UI blocks until the user runs the combined Safe upgrade + 4337 module enablement flow.
-- Wallet upgrades also prepare the ground for Project Safeguard and future Safe import functionality.
+- On every app launch we call `/world-chain`, which returns `requiresUpgrade`. If `true`, the UI blocks until the user runs the combined Safe upgrade + 4337 module enablement flow.
