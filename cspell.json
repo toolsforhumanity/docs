@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "tfh",
+    "mintlify",
+    "mdx",
+    "pnpm",
+    "jsx",
+    "tsx",
+    "cspell",
+    "spellcheck"
+  ],
+  "ignorePaths": [
+    "node_modules",
+    "pnpm-lock.yaml",
+    ".git",
+    "dist",
+    "build",
+    ".vscode"
+  ],
+  "ignoreRegExpList": [
+    "/\\b[A-Z]{2,}\\b/g",
+    "/\\b[a-f0-9]{6,}\\b/gi"
+  ],
+  "allowCompoundWords": true,
+  "dictionaries": [
+    "en_US",
+    "typescript",
+    "node",
+    "npm",
+    "html",
+    "css",
+    "bash",
+    "softwareTerms"
+  ]
+}

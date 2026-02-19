@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Extract pnpm version from package.json
+        id: get-pnpm-version
+        run: |
+          echo "version=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*$/\1/')" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ steps.get-pnpm-version.outputs.version }}
+          run_install: false
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Run spell check
+        run: pnpm run spellcheck
+      
+      - name: Check for broken links
+        run: pnpm run check-links

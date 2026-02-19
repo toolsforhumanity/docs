@@ -1,11 +1,12 @@
 ---
-title: "Advanced"
+title: "Advanced Topics on Backup"
+sidebarTitle: "Advanced Topics"
 description: "Internal advanced technical reference for the backup system."
 ---
 
 ## Encryption
 
-All encryption operations uses libsodium's asymmetric [sealed_box](https://doc.libsodium.org/public-key_cryptography/sealed_boxes) primitive through the [crypto_box](https://crates.io/crates/crypto_box) crate.
+All encryption operations use libsodium's asymmetric [sealed_box](https://doc.libsodium.org/public-key_cryptography/sealed_boxes) primitive through the [crypto_box](https://crates.io/crates/crypto_box) crate. A randomness source is required for sealed boxes to generate ephemeral key pairs for sealing. See [Cryptography](/world-app/cryptography) for more details on the randomness source.
 
 ## Apple Keychain
 
