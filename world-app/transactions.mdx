@@ -146,7 +146,7 @@ Example:
 | 1–5    | 5 B  | `magic`       | Constant `0x626472636b` (`"bdrck"`). Distinguishes Bedrock-built operations; collision probability $P = \frac{1}{2^{40}} ≈ 9.1 × 10^{-13}$. |
 | 6      | 1 B  | `instruction` | Reserved bitfield (currently `0`). Used later by the indexer.                                                   |
 | 7–16   | 10 B | `subtype`     | Transaction-type metadata (e.g., first 10 bytes of hashed `miniAppId`). Parsed per `typeId`.                    |
-| 17–23  | 7 B  | `random`      | 56 bits of entropy; collision risk for 1M tx in a bucket ≈ 0.0007%.                                             |
+| 17–23  | 7 B  | `random`      | 56 bits of entropy; collision risk for 1M tx in a bucket $P = \frac{n^2}{2^{57}} = \frac{(10^6)^2}{2^{57}} \approx 0.0007\%$.                                             |
 
 - If `magic` is missing, the indexer treats the transaction as external/unknown and falls back to legacy parsing.
 - `TransactionType` ordering must never change; add new IDs at the tail.
