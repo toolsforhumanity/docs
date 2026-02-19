@@ -10,7 +10,9 @@
     "jsx",
     "tsx",
     "cspell",
-    "spellcheck"
+    "spellcheck",
+    "pimlico",
+    "bdrock"
   ],
   "ignorePaths": [
     "node_modules",
@@ -20,10 +22,7 @@
     "build",
     ".vscode"
   ],
-  "ignoreRegExpList": [
-    "/\\b[A-Z]{2,}\\b/g",
-    "/\\b[a-f0-9]{6,}\\b/gi"
-  ],
+  "ignoreRegExpList": ["/\\b[A-Z]{2,}\\b/g", "/\\b[a-f0-9]{6,}\\b/gi"],
   "allowCompoundWords": true,
   "dictionaries": [
     "en_US",
