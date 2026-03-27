@@ -19,14 +19,13 @@
     "global": {
       "anchors": [
         {
-          "anchor": "World ID",
-          "href": "https://docs.world.org/world-id",
-          "icon": "id-card-clip"
-        },
-        {
-          "anchor": "World Chain",
-          "href": "https://docs.world.org/world-chain",
-          "icon": "dice-d10"
+          "anchor": "Mini Apps",
+          "href": "https://docs.world.org/mini-apps",
+          "icon": "grid-2",
+          "color": {
+            "light": "#1989fb",
+            "dark": "#4a90d9"
+          }
         }
       ]
     },
@@ -60,13 +59,8 @@
         ]
       },
       {
-        "tab": "Mini Apps",
-        "pages": [
-          {
-            "group": "Introduction",
-            "pages": ["mini-apps/index"]
-          }
-        ]
+        "tab": "Orb",
+        "pages": ["orb/index"]
       }
     ]
   },
