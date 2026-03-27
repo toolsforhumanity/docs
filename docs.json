@@ -24,10 +24,10 @@
         {
           "anchor": "Mini Apps",
           "href": "https://docs.world.org/mini-apps",
-          "icon": "grid-2",
+          "icon": "/images/mini-apps-card.svg",
           "color": {
-            "light": "#1989fb",
-            "dark": "#4a90d9"
+            "light": "#fff",
+            "dark": "#fff"
           }
         }
       ]
