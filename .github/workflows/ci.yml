@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality-checks:
-    runs-on: ubuntu-latest
+    runs-on: arc-medium-amd64-runner
     
     steps:
       - name: Checkout code
