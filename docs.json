@@ -2,6 +2,9 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "TFH Docs",
+  "metadata": {
+    "timestamp": true
+  },
   "colors": {
     "primary": "#000000",
     "dark": "#000",
@@ -19,14 +22,13 @@
     "global": {
       "anchors": [
         {
-          "anchor": "World ID",
-          "href": "https://docs.world.org/world-id",
-          "icon": "id-card-clip"
-        },
-        {
-          "anchor": "World Chain",
-          "href": "https://docs.world.org/world-chain",
-          "icon": "dice-d10"
+          "anchor": "Mini Apps",
+          "href": "https://docs.world.org/mini-apps",
+          "icon": "/images/mini-apps-card.svg",
+          "color": {
+            "light": "#fff",
+            "dark": "#fff"
+          }
         }
       ]
     },
@@ -40,6 +42,10 @@
         "pages": [
           "world-app/index",
           "world-app/bedrock",
+          {
+            "group": "Wallet",
+            "pages": ["world-app/transactions"]
+          },
           {
             "group": "Backup & Recovery",
             "pages": [
@@ -56,13 +62,8 @@
         ]
       },
       {
-        "tab": "Mini Apps",
-        "pages": [
-          {
-            "group": "Introduction",
-            "pages": ["mini-apps/index"]
-          }
-        ]
+        "tab": "Orb",
+        "pages": ["orb/index"]
       }
     ]
   },
@@ -70,8 +71,7 @@
     "primary": {
       "type": "button",
       "label": "Developer Portal",
-      "href": "https://developer.worldcoin.org",
-      "target": "_blank"
+      "href": "https://developer.worldcoin.org"
     }
   },
   "footer": {
