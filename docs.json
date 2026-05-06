@@ -50,6 +50,7 @@
             "group": "Backup & Recovery",
             "pages": [
               "world-app/backup/index",
+              "world-app/backup/factors",
               "world-app/backup/structure-and-sync",
               "world-app/backup/flows",
               "world-app/backup/advanced"
