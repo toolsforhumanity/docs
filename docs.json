@@ -53,6 +53,7 @@
               "world-app/backup/factors",
               "world-app/backup/structure-and-sync",
               "world-app/backup/flows",
+              "world-app/backup/components",
               "world-app/backup/advanced"
             ]
           },
