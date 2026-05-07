@@ -28,7 +28,7 @@ A <FactorSecret /> is a 32-byte secret used to encrypt the <BackupEncryptionKeyp
 
 ## Passkey (PRF)
 
-The factor secret is the output of the [WebAuthn PRF extension](https://www.w3.org/TR/webauthn-3/#prf-extension) evaluated over a fixed salt (`"world-app-backup"`). PRF is deterministic per credential, so the same passke always produces the same secret.
+The factor secret is the output of the [WebAuthn PRF extension](https://www.w3.org/TR/webauthn-3/#prf-extension) evaluated over a fixed salt (`"world-app-backup"`). PRF is deterministic per credential, so the same passkey always produces the same secret.
 
 Platform notes:
 
