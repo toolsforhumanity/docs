@@ -1,86 +1,74 @@
 ---
-title: "Backup Sync & Internal Structure"
+title: "Backup Structure & Sync"
 sidebarTitle: "Structure & Sync"
-description: "Describes how the backup is synced between devices and used for authenticating new devices."
+description: "What's inside the backup, how the manifest enforces consistent updates, and how sync works."
 ---
 
-import { UnsealedBackup, SealedBackup } from "/snippets/backup/terms.mdx";
+import { UnsealedBackup, SealedBackup, MainFactor, SyncFactor, BackupEncryptionKeypair } from "/snippets/backup/terms.mdx";
 import { RootKey, PersonalCustodyPackage } from "/snippets/terms.mdx";
 
+# What's in the Backup
 
-Syncing is the operation by which a user **updates** their backup from an authenticated device. A backup sync (`/sync`) is unidirectional, with a mobile client providing an update when new files are included in the backup. The client only fetches remote updates in certain scenarios (see below).
+The <UnsealedBackup /> contains the user's <RootKey /> plus a set of files needed to fully restore World App on a new device. Today this includes the user's <PersonalCustodyPackage />s (Orb, Document, Face) and the credential vault. Each file is tagged with a *designator* identifying its kind.
 
-The <UnsealedBackup /> contains the encoded <RootKey /> for World App plus a set of raw files. The source of truth is the `BackupFormat` structure in [Bedrock](https://github.com/worldcoin/bedrock). The files back up all required self-custodial information that a user holds in their World App. In particular, today this is the user's World ID <PersonalCustodyPackage />s (or PCPs).
+The exact list of designators is owned by [Bedrock](/world-app/bedrock) and evolves as new credentials are added. The authoritative enumeration lives in [`BackupFileDesignator`](https://github.com/worldcoin/bedrock/blob/main/bedrock/src/backup/mod.rs); refer to it directly rather than duplicating the list here.
 
-<Note>One of the challenges the system faces is that because the backup is end-to-end encrypted, the **Backup Service** cannot enforce any type of rules that prevent accidental data loss. For example, consider Client M in which the User gets their passport verified and hence obtains a PCP. If the user is also authenticated on Client N, and a backup sync is triggered from Client N, the PCP would be removed from the backup because Client N does not have it.</Note>
+The backup format itself is versioned ([`BackupFormat`](https://github.com/worldcoin/bedrock/blob/main/bedrock/src/backup/backup_format)). The current version is V0: a tar+gzip archive of CBOR-encoded files with per-file BLAKE3 checksums.
 
+# The Manifest
 
-## Backup State Management
+<Note>Because the backup is end-to-end encrypted, the Backup Service cannot enforce content-level rules. If Client M observes that the user just verified their passport (and now holds a new PCP), the Backup Service has no way to require that a sync from Client N — which doesn't have that file — must include it. The manifest mechanism described below is what prevents accidental data loss in that case.</Note>
 
-The backup system uses a **manifest-based approach** to prevent accidental data loss during syncs (e.g. Device A adds a file Y, when Device B tries to add file Z it doesn't know about file Y and the updated backup would not contain file Y, accidentally removing it). Each backup contains a manifest that describes its contents and enforces proper versioning.
+Every backup ships with a **manifest**: a versioned, hashed ledger of every file in the <UnsealedBackup />. The manifest entries record each file's path, designator, and content checksum. The hash of the manifest is the backup's *state*.
 
-### The Manifest
+Both the client and the Backup Service track this hash. The Backup Service uses it to enforce that every update transitions from the *current* state — preventing an out-of-date client from silently overwriting a newer backup with a stale one.
 
-Each backup ships with a manifest that describes the backup's contents. The manifest serves as a versioned ledger, ensuring clients always begin from the current state ($m_t$) and apply incremental updates to produce the next state ($m_{t+1}$).
+The canonical encoding and BLAKE3 hashing are computed by Bedrock so they're identical across iOS and Android. See [`BackupManifest`](https://github.com/worldcoin/bedrock/blob/main/bedrock/src/backup/manifest.rs) for the implementation.
 
-```json
-{
-  "version": 0,
-  "previous_manifest_hash": "0x1234567890000000000000000000000",
-  "files": [
-    {
-      "checksum": "0x1234567890000000000000000000000",
-      "file_path": "/personal_custody/unpack/me/here",
-      "designator": "orb_pcp"
-    }
-  ]
-}
-```
+# State Transitions
 
-Each state is defined as the `blake3` hash of the manifest file (raw bytes).
+A successful update transitions the backup from state $m_t$ (the current manifest hash) to $m_{t+1}$ (the updated manifest hash). The rules:
 
-### Responsibilities
+- **Client.** Bears responsibility for performing updates against the current state. Verifies it holds the latest manifest before making changes.
+- **Backup Service.** Maintains the current state hash. Validates each update is a transition from the recorded state. **Cannot** inspect encrypted contents.
 
-- **Client**: Bears sole responsibility for performing backup updates based on the current state. Must verify it's operating on the latest manifest before making changes.
-- **Server**: Maintains a pointer to the current state hash. Validates state transitions during updates but cannot inspect encrypted contents.
+If the client tries to sync from a stale state, the service rejects with `manifest_hash_mismatch` (HTTP 412). The client must re-authenticate a <MainFactor />, download the latest <SealedBackup />, apply local changes on top, and retry. See [Multiple Device Sync](/world-app/backup/advanced#multiple-device-sync) for why this happens in practice.
 
-### ManifestManager API (Client-Side)
+# ManifestManager API
 
-The `ManifestManager` provides controlled access to backup modifications. Before any operation, it fetches the remote state hash to ensure consistency:
+Clients interact with the manifest through Bedrock's `ManifestManager`. It gates every operation on a fresh remote-hash check before mutating local state, so the client cannot accidentally produce an update from a stale base:
 
-- If the local manifest is missing → prompts user to authenticate and download the remote state
-- If `remote_manifest_hash == local_manifest_hash` → proceeds with updates
-- If hashes differ → prompts user to authenticate and download the remote state
+- `store_file(designator, path)` — Add a file. Computes its checksum, appends to the manifest, packs and uploads.
+- `list_files(designator)` — List files for a designator.
+- `replace_all_files_for_designator(designator, new_path)` — Atomically replace every file under a designator with a new one.
+- `remove_file(path)` — Remove a file entry.
 
-#### Available Methods
+If the local manifest is missing or its hash differs from the remote, every method short-circuits with `RemoteAheadStaleError`. The client surfaces this as a prompt to re-authenticate and download the latest backup before retrying the change.
 
-- **`store_file(designator, filePath)`** - Adds a new file to the backup. Verifies path uniqueness, computes checksum, triggers pack & upload.
-- **`list_files(designator)`** - Returns all entries for the given designator.
-- **`replace_all_files_for_designator(designator, newFilePath)`** - Replaces all existing entries for a designator with a new file.
-- **`remove_file(filePath)`** - Removes a file entry from the manifest.
+See [`ManifestManager`](https://github.com/worldcoin/bedrock/blob/main/bedrock/src/backup/manifest.rs) for signatures and behavior.
 
-### Pack & Upload Process
+# Pack & Upload
 
-When building and uploading a new backup version:
+When building a new backup version (see [BF-4: Sync](/world-app/backup/flows#bf-4-backup-sync)):
 
-1. **Validate local manifest** - Error if missing; prompt to download remote.
-2. **Build unsealed backup** - Collect all files from the manifest. Verify checksums match for every file.
-3. **Submit sealed backup** - Include updated manifest inside. Report current and new manifest hashes to backend.
-4. **Backend validation** - Verifies current hash matches recorded state before accepting update.
+1. Validate the local manifest exists and matches the remote state.
+2. Build the <UnsealedBackup /> from the files referenced in the manifest. Verify each file's checksum.
+3. Encrypt with the <SealedBackup />'s keypair public key.
+4. POST `/sync` with the new <SealedBackup />, the current manifest hash, and the new manifest hash.
+5. Backup Service checks the current hash matches its recorded state, then atomically swaps the blob and the recorded hash.
 
-### Download & Unpack Process
+# Download & Unpack
 
-When downloading and unpacking a remote backup:
+When restoring or catching up (see [BF-2](/world-app/backup/flows#bf-2-backup-recovery) and [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)):
 
-1. **Decrypt sealed backup** - Extract and replace local manifest unconditionally.
-2. **Unpack files** - Write each file to its declared `filePath`. Replace existing files (log errors for checksum mismatches).
+1. Decrypt the <SealedBackup /> with the <MainFactor />-unlocked <BackupEncryptionKeypair />.
+2. Replace the local manifest unconditionally with the manifest from the unpacked backup.
+3. Write each file to its declared path. On checksum mismatch the file is overwritten with the version from the backup and the mismatch is logged — the backup is the source of truth.
 
-This approach is safe because clients enforce explicit state transitions based on the current manifest.
+# Startup Verification
 
-### Startup Verification
+On every app launch the client fetches the remote manifest hash. If it differs from the local hash, the user is prompted to re-authenticate a <MainFactor /> and download the remote backup. This handles the multi-device case where the user updated their backup from Device A and then opens World App on Device B.
 
-On app startup, the client fetches the remote state checksum. If it differs from the local manifest, the user is prompted to authenticate and download the remote backup.
+# Backend Safety Measures
 
-### Additional Safety Measures
-
-- **Backend short-lived locks** - Prevents narrow race windows during updates, only one update at a time. Authoritative enforcement remains via manifest hash validation.
+- **Short-lived locks.** The Backup Service holds a short-lived per-`backup_id` lock during create and sync to close the narrow race window between the hash check and the write. The authoritative consistency check remains the manifest hash comparison.
