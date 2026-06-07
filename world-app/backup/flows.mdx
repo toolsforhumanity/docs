@@ -16,7 +16,7 @@ The flows are numbered (BF-1, BF-2, …) and referenced from code and other docs
 
 **Non-obvious.** The client generates a *fresh* <BackupEncryptionKeypair /> at this moment, encrypts the <SealedBackup />, encrypts the keypair with the <FactorSecret /> of each enrolled <MainFactor />, and then **discards the keypair's secret**. Only the public key is retained locally so subsequent sync operations can re-encrypt new <SealedBackup />s without authenticating a Main Factor. This is what makes background sync (BF-4) possible.
 
-A <SyncFactor /> is also generated at creation and registered with the Backup Service in the same `/create` call, so the device is immediately authorized to push updates.
+A <SyncFactor /> is also generated at creation and registered with the Backup Service in the same `/v1/create` call, so the device is immediately authorized to push updates.
 
 **OIDC + Passkey one-tap enrollment.** When the user enrolls both a Passkey and an OIDC factor (Google/Apple) at creation, the client takes advantage of a *merged Turnkey passkey challenge*: the Passkey signs both a Backup Service challenge and a Turnkey activity stamp in a single user gesture. This is also the pattern used in BF-3 when adding an OIDC factor to an existing Passkey-only account.
 
@@ -41,7 +41,7 @@ flowchart LR
 
 The client identifies the backup by presenting the Main Factor's *public identifier* (passkey credential ID, OIDC `sub`, or Keychain public key) — the Backup Service has a reverse lookup table that maps these to a `backup_id`. Once the backup is located, the user authenticates the factor and the Backup Service returns the <SealedBackup /> together with the metadata.
 
-After the backup is decrypted, the client generates a fresh <SyncFactor /> for the new device and registers it via `/add-sync-factor`. This call uses a short-lived `sync_factor_token` issued by `/retrieve/from-challenge`, which lets the client add the new device authorization without re-prompting for a Main Factor.
+After the backup is decrypted, the client generates a fresh <SyncFactor /> for the new device and registers it via `/v1/add-sync-factor`. This call uses a short-lived `sync_factor_token` issued by `/v1/retrieve/from-challenge`, which lets the client add the new device authorization without re-prompting for a Main Factor.
 
 **OIDC recovery quirk.** For OIDC factors, decrypting the <BackupEncryptionKeypair /> requires the <FactorSecret /> held by Turnkey. The user authenticates to Turnkey via OIDC; Turnkey's enclave verifies the OIDC token *and the user's identity* before exporting the secret to the client. This is why OIDC recovery requires a network round-trip beyond the one to the Backup Service.
 
@@ -51,7 +51,7 @@ sequenceDiagram
     participant BackupService
     participant Turnkey
     Client->>BackupService: identify backup by factor public ID
-    Client->>BackupService: /retrieve/challenge/* + auth Main Factor
+    Client->>BackupService: /v1/retrieve/challenge/* + auth Main Factor
     BackupService->>Client: Sealed Backup + Metadata + sync_factor_token
     opt OIDC factor
         Client->>Turnkey: authenticate (OIDC)
@@ -68,7 +68,7 @@ sequenceDiagram
 
 **Non-obvious.** Adding a factor *does not* require re-encrypting the entire backup. The client only needs to encrypt the existing <BackupEncryptionKeypair /> with the new <FactorSecret /> and append the resulting <EncryptedBackupEncryptionKeypair /> to the metadata. This is the entire point of the keypair indirection layer (see [Layered Encryption Model](/world-app/backup/index#layered-encryption-model)).
 
-To add an OIDC factor with a Passkey already enrolled, the merged Turnkey passkey challenge from BF-1 is reused — one passkey tap authorizes both `/add-factor` on the Backup Service and the Turnkey activity that creates the OIDC provider.
+To add an OIDC factor with a Passkey already enrolled, the merged Turnkey passkey challenge from BF-1 is reused — one passkey tap authorizes both `/v1/add-factor` on the Backup Service and the Turnkey activity that creates the OIDC provider.
 
 **Currently disabled.** Adding a Passkey when an OIDC factor exists is *not* supported today. Removing a Passkey while an OIDC factor exists is also not supported, because the Passkey is the fallback path for Turnkey when the Sync Factor's Turnkey credentials are no longer valid (see [Unauthorized Device](/world-app/backup/advanced#unauthorized-device)).
 

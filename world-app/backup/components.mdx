@@ -28,8 +28,8 @@ It does **not**:
 ## Storage layout
 
 - **S3** — <SealedBackup /> blobs and <BackupMetadata /> JSON, keyed by `backup_id`.
-- **DynamoDB** — A `FactorLookup` table mapping `{scope}#{type}#{factor_value}` (e.g. `MAIN#PASSKEY#<credential_id>`) back to `backup_id`. This is a lookup utility — the source of truth for *which factors authorize a backup* is the metadata in S3.
-- **Redis** — Ephemeral state: JWE-encrypted challenge tokens (single-use, ~5 min TTL), short-lived per-`backup_id` locks during create/sync, and post-recovery `sync_factor_token`s used to register a new <SyncFactor /> without re-prompting a Main Factor.
+- **DynamoDB** — A `FactorLookup` table using a composite primary key combining the scope (MAIN/SYNC) and a factor identifier (credential ID for passkey, iss+sub for OIDC, public key for EC keypair) mapping back to `backup_id`. This is a lookup utility — the source of truth for *which factors authorize a backup* is the metadata in S3.
+- **Redis** — Ephemeral state: used-challenge hashes for replay protection (15 min TTL), hashed OIDC nonces (1 year TTL), short-lived per-`backup_id` locks during create/sync, and post-recovery `sync_factor_token`s used to register a new <SyncFactor /> without re-prompting a Main Factor.
 
 The list of endpoints, request shapes, and the `ChallengeContext` enum live in [`backup-service/src/routes`](https://github.com/worldcoin/backup-service/tree/main/src/routes); the OpenAPI spec is served at `/docs` on each environment.
 
@@ -40,10 +40,10 @@ Three factor types are recognized:
 | Factor type | Verification | Allowed scope |
 | --- | --- | --- |
 | Passkey | WebAuthn assertion (COSE `ES256`) verified via `webauthn-rs` | Main only |
-| OIDC account | OIDC token signature + claim verification (nonce = SHA256(ephemeral session pubkey)) | Main only |
+| OIDC account | OIDC token signature + claim verification ([nonce = SHA256(ephemeral session pubkey)](https://docs.turnkey.com/authentication/social-logins#nonce-restrictions-in-oidc-tokens)) | Main only |
 | EC keypair (P-256) | ECDSA signature, DER-encoded, verified with `p256` | Main or Sync |
 
-The challenge token is bound to the operation. A `Sync` challenge cannot be replayed against `/delete-factor` because the embedded `ChallengeContext` differs. Challenges are single-use (Redis enforces).
+The challenge token is bound to the operation. A `Sync` challenge cannot be replayed against `/v1/delete-factor` because the embedded `ChallengeContext` differs. Challenges are single-use (Redis enforces).
 
 ## What the service rejects
 

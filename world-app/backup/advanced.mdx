@@ -13,8 +13,8 @@ All asymmetric encryption in the backup uses libsodium's [sealed box](https://do
 
 Two distinct seals exist in the system:
 
-- **Sealing the <UnsealedBackup />.** Done with the public key of the freshly-generated <BackupEncryptionKeypair /> (X25519). The result is the <SealedBackup />. The keypair's secret key is destroyed after this seal, so even the original device cannot decrypt the <SealedBackup /> without going through a Main Factor.
-- **Sealing the <BackupEncryptionKeypair />.** Done once per Main Factor, with a public key derived from that factor's <FactorSecret /> (the secret is hashed into a Curve25519 secret key). The result is an <EncryptedBackupEncryptionKeypair /> stored in the <BackupMetadata />.
+- **Sealing the <UnsealedBackup />.** Done with the public key of the freshly-generated <BackupEncryptionKeypair /> (`Curve25519`). The result is the <SealedBackup />. The keypair's secret key is destroyed after this seal, so even the original device cannot decrypt the <SealedBackup /> without going through a Main Factor.
+- **Sealing the <BackupEncryptionKeypair />.** Done once per Main Factor, with a public key derived from that factor's <FactorSecret /> (the secret is encoded to a `Curve25519` point with modular reduction). The result is an <EncryptedBackupEncryptionKeypair /> stored in the <BackupMetadata />.
 
 Randomness for ephemeral keys comes from the OS CSPRNG via Bedrock's `OsRng`. See [Cryptography](/world-app/cryptography).
 
@@ -41,11 +41,11 @@ Triggers:
 
 The remediation path is always the same: re-authenticate a <MainFactor /> and register a fresh <SyncFactor /> via `/add-sync-factor`. The clients have explicit handling at three call sites:
 
-1. On `/create` returning `backup_account_id_already_exists`, prompt for a Main Factor and run the recovery-style sync-factor refresh — this turns a duplicate creation attempt into an idempotent re-authorization.
-2. On `/retrieve-metadata` returning `unauthorized_factor`, prompt for a Main Factor and refresh the Sync Factor. If `backup_does_not_exist` is returned instead, the backup has been deleted and the local state is wiped.
-3. On `/delete-factor` returning `PUBLIC_KEY_NOT_FOUND` from Turnkey, fall back to the user's Passkey to perform the Turnkey operation, then continue with the Backup Service deletion.
+1. On `/v1/create` returning `backup_account_id_already_exists`, prompt for a Main Factor and run the recovery-style sync-factor refresh — this turns a duplicate creation attempt into an idempotent re-authorization.
+2. On `/v1/retrieve-metadata` returning `unauthorized_factor`, prompt for a Main Factor and refresh the Sync Factor. If `backup_does_not_exist` is returned instead, the backup has been deleted and the local state is wiped.
+3. On `/v1/delete-factor` returning `PUBLIC_KEY_NOT_FOUND` from Turnkey, fall back to the user's Passkey to perform the Turnkey operation, then continue with the Backup Service deletion.
 
-<Note>Error handling on `/add-factor` and `/delete-factor` against the Backup Service does not need its own unauthorized-factor branch because every such call is preceded by `/retrieve-metadata`, which surfaces the condition first.</Note>
+<Note>Error handling on `/v1/add-factor` and `/v1/delete-factor` against the Backup Service does not need its own unauthorized-factor branch because every such call is preceded by `/v1/retrieve-metadata`, which surfaces the condition first.</Note>
 
 ## Stale Local Backup
 
@@ -55,7 +55,7 @@ If the local manifest hash differs from the remote on app startup or before a sy
 
 Removing the last <MainFactor /> deletes the entire backup (the data is no longer recoverable). The Backup Service enforces this server-side; clients confirm with the user before issuing the request. See [BF-7](/world-app/backup/flows#bf-7-factor-deletion) and [BF-8](/world-app/backup/flows#bf-8-backup-deletion).
 
-# Disaster Recovery via /reset
+# Disaster Recovery via /v1/reset
 
 The <BackupAccountId /> keypair (secp256k1, derived deterministically from the <RootKey />) is a last-resort recovery mechanism for the case where:
 
@@ -63,6 +63,8 @@ The <BackupAccountId /> keypair (secp256k1, derived deterministically from the <
 - The user has *also* lost every <SyncFactor /> (no authorized device).
 - But the user **still has the original device** (or the original Root Key in some other form) — and therefore can reproduce the deterministic backup-account secp256k1 keypair.
 
-In that situation, the user can sign a `/reset` challenge with the backup-account secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then deletes the backup metadata, the sealed blob, and all factor lookup entries. The user can then run [BF-1](/world-app/backup/flows#bf-1-backup-creation) again from scratch.
+In that situation, the user can sign a `/v1/reset` challenge with the backup-account secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then deletes the backup metadata, the sealed blob, and all factor lookup entries. The user can then run [BF-1](/world-app/backup/flows#bf-1-backup-creation) again from scratch.
 
-This is **not** a recovery of the existing backup contents — it's a clean wipe that lets the user re-enroll without an account-already-exists collision. The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their PCPs and credential vault.
+This is **not** a recovery of the existing backup contents; it's a clean wipe that lets the user re-enroll without an _"Account already exists" collision. The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup*. 
+
+Also important to note that this Disaster Recovery option does **NOT** have any effect on Turnkey, which means the <FactorSecret /> stored in Turnkey will be preserved. This is because without access to a <MainFactor /> or <SyncFactor />, the user cannot trigger a Turnkey deletion. This is mostly a housekeeping concern as with a deleted backup the ciphertext is permanently deleted.
