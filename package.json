@@ -12,9 +12,9 @@
   "license": "MIT",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
-    "mint": "^4.2.365"
+    "mint": "^4.2.598"
   },
   "devDependencies": {
-    "cspell": "^9.2.0"
+    "cspell": "^10.0.1"
   }
 }
