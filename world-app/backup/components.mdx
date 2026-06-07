@@ -1,0 +1,119 @@
+---
+title: "Components & Parties"
+sidebarTitle: "Components & Parties"
+description: "What the Backup Service and Turnkey actually do, what they store, and where their authority ends."
+---
+
+import { SyncFactor, MainFactor, BackupMetadata, SealedBackup, FactorSecret, BackupEncryptionKeypair, BackupAccountId } from "/snippets/backup/terms.mdx";
+
+# Backup Service
+
+The Backup Service is a [Nethermind](https://www.nethermind.io/)-hosted REST service. Tools for Humanity has no production access; the service holds ciphertext and metadata only. Its open source repository is [`backup-service`](https://github.com/worldcoin/backup-service).
+
+## Role and guarantees
+
+The service:
+
+- Stores the <SealedBackup /> and <BackupMetadata />.
+- Authenticates clients via per-operation challenges signed by the relevant factor.
+- Enforces state transitions on sync via the manifest hash (see [Structure & Sync](/world-app/backup/structure-and-sync#state-transitions)).
+- Maps factor public identifiers back to `backup_id` so a recovering client can locate its backup from a single Main Factor.
+
+It does **not**:
+
+- Hold the <SealedBackup />'s decryption key, any <FactorSecret />, or any factor private key.
+- Inspect the contents of the <SealedBackup />.
+- Authenticate users beyond verifying signatures and tokens — there is no concept of a Backup Service user account.
+
+## Storage layout
+
+- **S3** — <SealedBackup /> blobs and <BackupMetadata /> JSON, keyed by `backup_id`.
+- **DynamoDB** — A `FactorLookup` table mapping `{scope}#{type}#{factor_value}` (e.g. `MAIN#PASSKEY#<credential_id>`) back to `backup_id`. This is a lookup utility — the source of truth for *which factors authorize a backup* is the metadata in S3.
+- **Redis** — Ephemeral state: JWE-encrypted challenge tokens (single-use, ~5 min TTL), short-lived per-`backup_id` locks during create/sync, and post-recovery `sync_factor_token`s used to register a new <SyncFactor /> without re-prompting a Main Factor.
+
+The list of endpoints, request shapes, and the `ChallengeContext` enum live in [`backup-service/src/routes`](https://github.com/worldcoin/backup-service/tree/main/src/routes); the OpenAPI spec is served at `/docs` on each environment.
+
+## Authorization
+
+Three factor types are recognized:
+
+| Factor type | Verification | Allowed scope |
+| --- | --- | --- |
+| Passkey | WebAuthn assertion (COSE `ES256`) verified via `webauthn-rs` | Main only |
+| OIDC account | OIDC token signature + claim verification (nonce = SHA256(ephemeral session pubkey)) | Main only |
+| EC keypair (P-256) | ECDSA signature, DER-encoded, verified with `p256` | Main or Sync |
+
+The challenge token is bound to the operation. A `Sync` challenge cannot be replayed against `/delete-factor` because the embedded `ChallengeContext` differs. Challenges are single-use (Redis enforces).
+
+## What the service rejects
+
+A handful of named errors are surfaced in client code paths and worth knowing by name:
+
+- `manifest_hash_mismatch` — client tried to sync from a stale state (see [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)).
+- `unauthorized_factor` — factor identifier is in `FactorLookup` but no longer in the backup metadata; the device is no longer authorized (see [Unauthorized Device](/world-app/backup/advanced#unauthorized-device)).
+- `backup_does_not_exist` — the metadata is gone (the user deleted their backup); local state should be cleared.
+- `backup_account_id_already_exists` — `/create` collision; some prior creation attempt registered this backup ID. The client retries with a fresh sync factor authorization on the existing record.
+- `factor_already_exists` — attempted to add a factor whose public identifier is already enrolled.
+- `invalid_challenge_context` — challenge token didn't match the operation it was submitted for.
+
+The full enumeration is in [`backup-service/src/types/error.rs`](https://github.com/worldcoin/backup-service/blob/main/src/types/error.rs).
+
+# Turnkey
+
+[Turnkey](https://turnkey.com/) is the custodian of <FactorSecret />s for OIDC factors. It runs key material inside TEE-backed enclaves and exposes a REST API; we picked it because no other provider met the combined requirements of OIDC-aware authentication, non-custodial key handling, and an API-first integration model.
+
+<Note>All short-lived keys used with Turnkey are set for a duration of **5 minutes** unless otherwise specified.</Note>
+
+## Turnkey User Setup
+
+<Info>The initial release of this feature relied on a slightly different user setup. Some early World App Users will have a slightly different setup (with the Root Quorum being `auth_user_main` solely) before a migration is introduced.</Info>
+
+Each World App user is a Turnkey *sub-organization*. The sub-organization has three users with distinct roles:
+
+1. **Ephemeral.** A `root_user_genesis` user is created by World App's backend to bootstrap the sub-organization.
+   - It is a root user.
+   - It is created with a short-lived keypair provided by the client.
+   - It is also registered with a fallback `0` key (`Curve25519`) because Turnkey requires every user to have at least one valid authenticator. After the genesis user is no longer needed, the keypair is discarded — the fallback key remains but no one holds its private half.
+   - The client deletes this user immediately after `auth_user_main` is set up.
+2. **`auth_user_main`** — represents the user's primary authentication and holds their <MainFactor /> credentials (passkeys and OIDC providers).
+   - Permission policy: explicit `ALLOW` for all activities (`condition = true`).
+
+   ```json
+   {
+     "effect": "EFFECT_ALLOW",
+     "consensus": "approvers.any(user, user.id == '<authUserMainId>')",
+     "condition": "true"
+   }
+   ```
+3. **`sync_factor_user`** — represents <SyncFactor /> operations. One long-lived API keypair is registered per device (each device holds its own private key locally; all are attached to the same user). The user's policy permits *deletion-only* activities, so a Sync Factor cannot grant itself recovery powers.
+
+   ```json
+   {
+     "effect": "EFFECT_ALLOW",
+     "consensus": "approvers.any(user, user.id == '<syncFactorUserId>')",
+     "condition": "activity.action == 'DELETE' && (activity.resource == 'CREDENTIAL' || activity.resource == 'PRIVATE_KEY' || activity.resource == 'ORGANIZATION')"
+   }
+   ```
+
+   > The policy filters on `activity.action` and `activity.resource` instead of `activity.type` because the latter is version-specific. The current expansion covers `ACTIVITY_TYPE_DELETE_API_KEYS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_AUTHENTICATORS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION` (`ORGANIZATION`), `ACTIVITY_TYPE_DELETE_PRIVATE_KEYS` (`PRIVATE_KEY`), `ACTIVITY_TYPE_DELETE_PRIVATE_KEY_TAGS` (`PRIVATE_KEY`), `ACTIVITY_TYPE_DISABLE_PRIVATE_KEY` (`PRIVATE_KEY`).
+
+In addition, Turnkey has the concept of a [Root Quorum](https://docs.turnkey.com/concepts/users/root-quorum). When the Root Quorum is met, any action bypasses the Policy Engine. We set the Root Quorum to 2-of-2 with both `auth_user_main` and `sync_factor_user` as members. This ensures:
+
+- `sync_factor_user` can update `auth_user_main` *as granted by its policy* (delete OAuth providers, delete authenticators).
+- `sync_factor_user` cannot take any action *not* explicitly granted by the policy, because it cannot reach the Root Quorum on its own — Root Quorum still requires `auth_user_main`'s approval.
+- A user can always update `sync_factor_user` from `auth_user_main` after losing all devices.
+
+## What Turnkey holds vs what the Backup Service holds
+
+| Held by Turnkey | Held by Backup Service |
+| --- | --- |
+| OIDC factor secrets (inside enclave) | <SealedBackup /> blob (encrypted) |
+| OIDC provider configurations | <BackupMetadata /> (encrypted keypair copies, factor list) |
+| Sub-organization membership (auth/sync users) | `FactorLookup` reverse index |
+| P-256 API keypairs (per-device sync factor) | Challenge state (Redis) |
+
+Neither holds the <BackupEncryptionKeypair />'s secret key — that is destroyed at backup creation.
+
+## Direct vs proxied activities
+
+Most Turnkey activities (importing the OIDC factor secret at enrollment, exporting it at recovery) are sent **directly** from the client to Turnkey using a stamp computed in Bedrock. The exception is *creating a new sub-organization*, which requires a stamp from Tools for Humanity's parent-organization API key — that single activity goes through TFH's app-backend.

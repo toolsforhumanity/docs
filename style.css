@@ -1,0 +1,7 @@
+@import url('/fonts/excalifont.woff2');
+@font-face {
+    font-family: 'Excalifont';
+    src: url('/fonts/excalifont.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}

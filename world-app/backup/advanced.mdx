@@ -1,15 +1,68 @@
 ---
-title: "Advanced Topics on Backup"
+title: "Advanced Topics"
 sidebarTitle: "Advanced Topics"
-description: "Internal advanced technical reference for the backup system."
+description: "Encryption details, edge cases, and disaster recovery."
 ---
 
-## Encryption
+import { SyncFactor, MainFactor, BackupEncryptionKeypair, EncryptedBackupEncryptionKeypair, FactorSecret, SealedBackup, UnsealedBackup, BackupAccountId, BackupMetadata } from "/snippets/backup/terms.mdx";
+import { RootKey } from "/snippets/terms.mdx";
 
-All encryption operations use libsodium's asymmetric [sealed_box](https://doc.libsodium.org/public-key_cryptography/sealed_boxes) primitive through the [crypto_box](https://crates.io/crates/crypto_box) crate. A randomness source is required for sealed boxes to generate ephemeral key pairs for sealing. See [Cryptography](/world-app/cryptography) for more details on the randomness source.
+# Encryption
 
-## Apple Keychain
+All asymmetric encryption in the backup uses libsodium's [sealed box](https://doc.libsodium.org/public-key_cryptography/sealed_boxes) primitive (X25519 key agreement + XSalsa20-Poly1305 AEAD), via the [`crypto_box`](https://crates.io/crates/crypto_box) crate. A sealed box generates an ephemeral sender keypair per encryption, so each ciphertext is independently sealed.
 
-TODO: Details coming soon.
+Two distinct seals exist in the system:
 
+- **Sealing the <UnsealedBackup />.** Done with the public key of the freshly-generated <BackupEncryptionKeypair /> (X25519). The result is the <SealedBackup />. The keypair's secret key is destroyed after this seal, so even the original device cannot decrypt the <SealedBackup /> without going through a Main Factor.
+- **Sealing the <BackupEncryptionKeypair />.** Done once per Main Factor, with a public key derived from that factor's <FactorSecret /> (the secret is hashed into a Curve25519 secret key). The result is an <EncryptedBackupEncryptionKeypair /> stored in the <BackupMetadata />.
 
+Randomness for ephemeral keys comes from the OS CSPRNG via Bedrock's `OsRng`. See [Cryptography](/world-app/cryptography).
+
+# Edge Cases
+
+## Multiple Device Sync
+
+A user authenticated on multiple devices will produce divergent local backup state if both devices make changes. The system handles this conservatively: a <SyncFactor /> is *not* authorized to retrieve the encrypted backup, so a device cannot silently catch up to remote updates. Instead, the manifest hash mismatch detected at sync (or startup, see [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)) escalates to a <MainFactor /> re-authentication and a fresh download.
+
+The Backup Service enforces that every sync transitions from the *current* manifest hash, so two concurrent devices cannot accidentally clobber each other — the second one to arrive will be rejected and forced to re-fetch.
+
+## Unauthorized Device
+
+A device's <SyncFactor /> can become unauthorized in either or both of the systems it's registered with (Backup Service, Turnkey). Symptoms:
+
+- Backup Service returns `unauthorized_factor` (when the right `backup_id` was provided) or `backup_does_not_exist` (factor lookup found nothing).
+- Turnkey returns `PUBLIC_KEY_NOT_FOUND`.
+
+Triggers:
+
+- The user deleted and re-created the entire backup from another device. Sibling devices become unauthorized.
+- The user lost their <SyncFactor /> (e.g., the device was reset).
+- (Future) The user explicitly revoked authorization for a specific device.
+
+The remediation path is always the same: re-authenticate a <MainFactor /> and register a fresh <SyncFactor /> via `/add-sync-factor`. The clients have explicit handling at three call sites:
+
+1. On `/create` returning `backup_account_id_already_exists`, prompt for a Main Factor and run the recovery-style sync-factor refresh — this turns a duplicate creation attempt into an idempotent re-authorization.
+2. On `/retrieve-metadata` returning `unauthorized_factor`, prompt for a Main Factor and refresh the Sync Factor. If `backup_does_not_exist` is returned instead, the backup has been deleted and the local state is wiped.
+3. On `/delete-factor` returning `PUBLIC_KEY_NOT_FOUND` from Turnkey, fall back to the user's Passkey to perform the Turnkey operation, then continue with the Backup Service deletion.
+
+<Note>Error handling on `/add-factor` and `/delete-factor` against the Backup Service does not need its own unauthorized-factor branch because every such call is preceded by `/retrieve-metadata`, which surfaces the condition first.</Note>
+
+## Stale Local Backup
+
+If the local manifest hash differs from the remote on app startup or before a sync, Bedrock returns `RemoteAheadStaleError`. The UI escalates the user to a recovery-style prompt and runs [BF-5](/world-app/backup/flows#bf-5-remote-update-detection). The local state is overwritten unconditionally with the freshly-downloaded backup — the manifest itself is the arbiter.
+
+## Last Main Factor Restriction
+
+Removing the last <MainFactor /> deletes the entire backup (the data is no longer recoverable). The Backup Service enforces this server-side; clients confirm with the user before issuing the request. See [BF-7](/world-app/backup/flows#bf-7-factor-deletion) and [BF-8](/world-app/backup/flows#bf-8-backup-deletion).
+
+# Disaster Recovery via /reset
+
+The <BackupAccountId /> keypair (secp256k1, derived deterministically from the <RootKey />) is a last-resort recovery mechanism for the case where:
+
+- The user has lost every <MainFactor /> (no enrolled passkey, OIDC, or iCloud Keychain factor remains accessible).
+- The user has *also* lost every <SyncFactor /> (no authorized device).
+- But the user **still has the original device** (or the original Root Key in some other form) — and therefore can reproduce the deterministic backup-account secp256k1 keypair.
+
+In that situation, the user can sign a `/reset` challenge with the backup-account secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then deletes the backup metadata, the sealed blob, and all factor lookup entries. The user can then run [BF-1](/world-app/backup/flows#bf-1-backup-creation) again from scratch.
+
+This is **not** a recovery of the existing backup contents — it's a clean wipe that lets the user re-enroll without an account-already-exists collision. The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their PCPs and credential vault.

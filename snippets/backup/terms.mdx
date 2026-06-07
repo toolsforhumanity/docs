@@ -41,3 +41,15 @@ export const EncryptedBackupEncryptionKeypair = () => {
         <Tooltip tip="An encrypted version of the Backup Encryption Keypair. It is encrypted with a Factor Secret.">Encrypted Backup Encryption Keypair</Tooltip>
     )
 }
+
+export const FactorSecret = () => {
+    return (
+        <Tooltip tip="A 32-byte secret derived from or held by a Main Factor. Used to encrypt the Backup Encryption Keypair.">Factor Secret</Tooltip>
+    )
+}
+
+export const BackupAccountId = () => {
+    return (
+        <Tooltip tip="A deterministic identifier of the form backup_account_0..., derived from the user's Root Key. The corresponding secp256k1 keypair is the disaster-recovery key for /reset.">Backup Account ID</Tooltip>
+    )
+}
