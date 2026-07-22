@@ -60,9 +60,9 @@ Removing the last <MainFactor /> deletes the entire backup (the data is no longe
 The <BackupAccountId /> keypair (secp256k1, derived deterministically from the <RootKey />) is a last-resort recovery mechanism for the case where:
 
 - The user has lost every <MainFactor /> (no enrolled passkey, OIDC, or iCloud Keychain factor remains accessible).
-- The user has *also* lost every <SyncFactor /> (no authorized device).
-- But the user **still has the original device** (or the original Root Key in some other form) — and therefore can reproduce the deterministic backup-account secp256k1 keypair.
+- The user has *also* lost every <SyncFactor /> (no authorized device). _If they have a Sync Factor they can simply remove all the Main Factors to start over._
+- But the user **still has the original device** (or the original Root Key in some other form), and therefore can reproduce the deterministic backup-account `secp256k1` keypair and produce a signature on it.
 
-In that situation, the user can sign a `/reset` challenge with the backup-account secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then deletes the backup metadata, the sealed blob, and all factor lookup entries. The user can then run [BF-1](/world-app/backup/flows#bf-1-backup-creation) again from scratch.
+This is **not** a recovery of the existing backup contents. It's a clean wipe that lets the user re-enroll fresh (otherwise the system would reject duplicate backups). The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their root key, PCPs and credential vault.
 
-This is **not** a recovery of the existing backup contents — it's a clean wipe that lets the user re-enroll without an account-already-exists collision. The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their PCPs and credential vault.
+Importantly, this process wipes the entire state of the `backup-service` for the user as well as their Turnkey account. Please note that support for deleting the stale Turnkey account was introduced around August 2026, previously set up accounts cannot be deleted by the user as the user is unable to authenticate.
