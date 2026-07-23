@@ -65,4 +65,16 @@ The <BackupAccountId /> keypair (secp256k1, derived deterministically from the <
 
 This is **not** a recovery of the existing backup contents. It's a clean wipe that lets the user re-enroll fresh (otherwise the system would reject duplicate backups). The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their root key, PCPs and credential vault.
 
-Importantly, this process wipes the entire state of the `backup-service` for the user as well as their Turnkey account. Please note that support for deleting the stale Turnkey account was introduced around August 2026, previously set up accounts cannot be deleted by the user as the user is unable to authenticate.
+`/reset` wipes the state across the board, and primarily: the entire `backup-service` state for the user (remote ciphertext backup), and their Turnkey sub-organization. The backup-service deletion is authoritative; the Turnkey teardown is described below.
+
+## Registering the break_glass_user
+
+The teardown is only possible if the sub-organization has a `break_glass_user` (see [Components & Parties — Turnkey](/world-app/backup/components#turnkey)).
+
+<Note>Support for deleting the stale Turnkey sub-organization was introduced around August 2026. Accounts set up before then initially could not be deleted — they had no `break_glass_user`, and the user (having lost every Main and Sync Factor) cannot authenticate any other way. Those accounts become deletable once the migration above backfills the `break_glass_user`.</Note>
+
+## Tearing down the Turnkey sub-organization
+
+After the backup-service reset completes, the client tears down the Turnkey sub-organization by first resolving the Turnkey sub-organization ID using the [Auth Proxy](https://docs.turnkey.com/features/authentication/auth-proxy)'s endpoint `POST https://authproxy.turnkey.com/v1/account`. After which a `deleteSubOrganization` is sent stamped with the backup account key (which is represented as the `break_glass_user` in Turnkey).
+
+**Best-effort.** A Turnkey failure does **not** fail the reset. The `backup-service` deletion is authoritative and the user can still re-enroll.

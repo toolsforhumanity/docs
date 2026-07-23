@@ -85,9 +85,10 @@ Each World App user is a Turnkey *sub-organization*. Throughout the docs and the
      "condition": "true"
    }
    ```
-3. **`break_glass_user`**. Represents the `secp256k1` keypair with which the [**Backup Account ID**](/world-app/backup/factors#backup-account-id) is computed. This user is used so the Turnkey account can be deleted in the event of a [Reset](/world-app/backup/advanced#disaster-recovery-via-/reset). The user's policy permits *deletion-only*:
-  ```json
-  {
+3. **`break_glass_user`**. Represents the `secp256k1` keypair from which the [**Backup Account ID**](/world-app/backup/factors#backup-account-id) is derived. It exists so the Turnkey sub-organization can be deleted during a [Reset](/world-app/backup/advanced#disaster-recovery-via-reset). Because the backup-account key is deterministic (HKDF) and known ahead of time, this user is named `break_glass_user_<last 6 hex chars of the backup-account public key>`. It is **not** a member of the Root Quorum. The user's policy permits *deletion-only* of the sub-organization:
+
+   ```json
+   {
      "effect": "EFFECT_ALLOW",
      "consensus": "approvers.any(user, user.id == '<break_glass_user_id>')",
      "condition": "activity.type == 'ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION'"
