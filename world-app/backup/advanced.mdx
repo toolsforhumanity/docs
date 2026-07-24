@@ -75,6 +75,6 @@ The teardown is only possible if the sub-organization has a `break_glass_user` (
 
 ## Tearing down the Turnkey sub-organization
 
-After the backup-service reset completes, the client tears down the Turnkey sub-organization by first resolving the Turnkey sub-organization ID using the [Auth Proxy](https://docs.turnkey.com/features/authentication/auth-proxy)'s endpoint `POST https://authproxy.turnkey.com/v1/account`. After which a `deleteSubOrganization` is sent stamped with the Backup Account Key (which is represented as the `break_glass_user` in Turnkey).
+After the backup-service reset completes, the client tears down the Turnkey sub-organization by first resolving the Turnkey sub-organization ID using the [Auth Proxy](https://docs.turnkey.com/features/authentication/auth-proxy)'s endpoint `POST https://authproxy.turnkey.com/v1/account`, then sending a `deleteSubOrganization` stamped with the Backup Account Key (which is represented as the `break_glass_user` in Turnkey).
 
 **Best-effort.** A Turnkey failure does **not** fail the reset. The `backup-service` deletion is authoritative and the user can still re-enroll.
