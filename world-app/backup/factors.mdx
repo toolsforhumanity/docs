@@ -4,7 +4,7 @@ sidebarTitle: "Factors"
 description: "Main Factors, Sync Factors, and how each Factor Secret is derived."
 ---
 
-import { MainFactor, SyncFactor, FactorSecret, BackupEncryptionKeypair, BackupAccountId, BackupMetadata } from "/snippets/backup/terms.mdx";
+import { MainFactor, SyncFactor, FactorSecret, BackupEncryptionKeypair, BackupAccountId, BackupAccountKey, BackupMetadata } from "/snippets/backup/terms.mdx";
 import { RootKey } from "/snippets/terms.mdx";
 
 # Main Factors vs Sync Factors
@@ -65,13 +65,13 @@ For OIDC users, the Sync Factor is *also* registered with Turnkey as a sub-organ
 
 # Backup Account ID
 
-Independent of the factor system, every backup has a deterministic <BackupAccountId /> derived from the user's <RootKey /> via a BLAKE2b-based KDF (subkey ID `0x101`, context `OXIDEKEY`). The keypair is **secp256k1**, distinct from the P-256 keypairs used elsewhere in the system. Format:
+Independent of the factor system, every backup has a <BackupAccountKey />, a **secp256k1** keypair derived deterministically from the user's <RootKey /> via a KDF (subkey ID `0x101`, context `OXIDEKEY`), distinct from the P-256 keypairs used elsewhere in the system. Its public key is encoded as the <BackupAccountId />, a string of the form:
 
 ```
 backup_account_<33-byte_compressed_pubkey_hex>
 ```
 
-This keypair is **not** a factor — it cannot decrypt the backup. Its sole purpose is the disaster-recovery `/reset` endpoint: when a user has lost every Main and Sync Factor but still controls the original device (and therefore the Root Key), the Backup Account ID lets them prove ownership and wipe the existing backup so they can re-enroll fresh factors. See [Disaster Recovery via /reset](/world-app/backup/advanced#disaster-recovery-via-reset).
+The Backup Account Key is **not** a factor — it cannot decrypt the backup. Its sole purpose is the disaster-recovery `/reset` endpoint: when a user has lost every Main and Sync Factor but still controls the original device (and therefore the Root Key), signing with the Backup Account Key proves ownership and wipes the existing backup so they can re-enroll fresh factors. See [Disaster Recovery via /reset](/world-app/backup/advanced#disaster-recovery-via-reset).
 
 # Platform Differences
 

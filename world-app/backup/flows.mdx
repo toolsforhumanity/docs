@@ -4,7 +4,7 @@ sidebarTitle: "Flows"
 description: "The key user-facing flows. Focused on non-obvious behavior and decisions rather than step-by-step UI scripts."
 ---
 
-import { MainFactor, SyncFactor, BackupEncryptionKeypair, FactorSecret, SealedBackup, BackupMetadata, EncryptedBackupEncryptionKeypair } from "/snippets/backup/terms.mdx";
+import { MainFactor, SyncFactor, BackupEncryptionKeypair, FactorSecret, SealedBackup, BackupMetadata, EncryptedBackupEncryptionKeypair, BackupAccountKey } from "/snippets/backup/terms.mdx";
 
 # Conventions
 
@@ -107,3 +107,12 @@ This is not a separate flow but a consequence of BF-4 and BF-5 interacting. See 
 **When.** The user removes their last <MainFactor />, or initiates full account deletion in World App.
 
 **Non-obvious.** Deletion clears state across three places — the Backup Service (metadata + sealed blob + factor lookup), Turnkey (entire sub-organization, if one exists), and local device (Sync Factor keypair, plus the iCloud Keychain factor on iOS). All three deletions are issued from the client with retries; failures are logged but do not block the user-visible "deleted" outcome, because the Backup Service's deletion is authoritative.
+
+# BF-9: Disaster Recovery via /reset
+
+**When.** The user has lost every <MainFactor /> and every <SyncFactor /> but still controls the original device (and therefore the Root Key). This is the last-resort path; see [Disaster Recovery via /reset](/world-app/backup/advanced#disaster-recovery-via-reset) for the full rationale and preconditions.
+
+**Non-obvious.** This is a destructive *wipe*, not a recovery of backup contents. This process clears the backup so the user can re-enroll from scratch. It's authorized by the <BackupAccountKey /> the user reproduces locally, so nothing here depends on a Main or Sync Factor:
+
+1. The Backup Service `/reset` deletes the metadata, sealed blob, and factor-lookup entries. This deletion is authoritative.
+2. The Turnkey sub-organization is torn down. The client submits a `deleteSubOrganization` activity stamped with the Backup Account Key acting as the `break_glass_user`.
