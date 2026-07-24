@@ -4,7 +4,7 @@ sidebarTitle: "Components & Parties"
 description: "What the Backup Service and Turnkey actually do, what they store, and where their authority ends."
 ---
 
-import { SyncFactor, MainFactor, BackupMetadata, SealedBackup, FactorSecret, BackupEncryptionKeypair, BackupAccountId } from "/snippets/backup/terms.mdx";
+import { SyncFactor, MainFactor, BackupMetadata, SealedBackup, FactorSecret, BackupEncryptionKeypair, BackupAccountKey } from "/snippets/backup/terms.mdx";
 
 # Backup Service
 
@@ -85,7 +85,7 @@ Each World App user is a Turnkey *sub-organization*. Throughout the docs and the
      "condition": "true"
    }
    ```
-3. **`break_glass_user`**. Represents the `secp256k1` keypair from which the [**Backup Account ID**](/world-app/backup/factors#backup-account-id) is derived. It exists so the Turnkey sub-organization can be deleted during a [Reset](/world-app/backup/advanced#disaster-recovery-via-reset). Because the backup-account key is deterministic (HKDF) and known ahead of time, this user is named `break_glass_user_<last 6 hex chars of the backup-account public key>`. It is **not** a member of the Root Quorum. The user's policy permits *deletion-only* of the sub-organization:
+3. **`break_glass_user`**. Represents the <BackupAccountKey /> — the `secp256k1` keypair whose public key is encoded into the [**Backup Account ID**](/world-app/backup/factors#backup-account-id). It exists so the Turnkey sub-organization can be deleted during a [Reset](/world-app/backup/advanced#disaster-recovery-via-reset). Because the Backup Account Key is deterministic and known ahead of time, this user is named `break_glass_user_<last 6 hex chars of the Backup Account Key's public key>`. It is **not** a member of the Root Quorum. The user's policy permits *deletion-only* of the sub-organization:
 
    ```json
    {
