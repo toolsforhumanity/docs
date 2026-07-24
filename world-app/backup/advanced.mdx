@@ -4,7 +4,7 @@ sidebarTitle: "Advanced Topics"
 description: "Encryption details, edge cases, and disaster recovery."
 ---
 
-import { SyncFactor, MainFactor, BackupEncryptionKeypair, EncryptedBackupEncryptionKeypair, FactorSecret, SealedBackup, UnsealedBackup, BackupAccountId, BackupMetadata } from "/snippets/backup/terms.mdx";
+import { SyncFactor, MainFactor, BackupEncryptionKeypair, EncryptedBackupEncryptionKeypair, FactorSecret, SealedBackup, UnsealedBackup, BackupAccountKey, BackupMetadata } from "/snippets/backup/terms.mdx";
 import { RootKey } from "/snippets/terms.mdx";
 
 # Encryption
@@ -39,7 +39,7 @@ Triggers:
 - The user lost their <SyncFactor /> (e.g., the device was reset).
 - (Future) The user explicitly revoked authorization for a specific device.
 
-The remediation path is always the same: re-authenticate a <MainFactor /> and register a fresh <SyncFactor /> via `/add-sync-factor`. The clients have explicit handling at three call sites:
+The remediation path is always the same: re-authenticate a <MainFactor /> and register a fresh <SyncFactor /> via `/v1/add-sync-factor`. The clients have explicit handling at three call sites:
 
 1. On `/v1/create` returning `backup_account_id_already_exists`, prompt for a Main Factor and run the recovery-style sync-factor refresh — this turns a duplicate creation attempt into an idempotent re-authorization.
 2. On `/v1/retrieve-metadata` returning `unauthorized_factor`, prompt for a Main Factor and refresh the Sync Factor. If `backup_does_not_exist` is returned instead, the backup has been deleted and the local state is wiped.
@@ -57,14 +57,26 @@ Removing the last <MainFactor /> deletes the entire backup (the data is no longe
 
 # Disaster Recovery via /v1/reset
 
-The <BackupAccountId /> keypair (secp256k1, derived deterministically from the <RootKey />) is a last-resort recovery mechanism for the case where:
+The <BackupAccountKey /> (secp256k1, derived deterministically from the <RootKey />) is a last-resort recovery mechanism for the case where:
 
 - The user has lost every <MainFactor /> (no enrolled passkey, OIDC, or iCloud Keychain factor remains accessible).
-- The user has *also* lost every <SyncFactor /> (no authorized device).
-- But the user **still has the original device** (or the original Root Key in some other form) — and therefore can reproduce the deterministic backup-account secp256k1 keypair.
+- The user has *also* lost every <SyncFactor /> (no authorized device). _If they have a Sync Factor they can simply remove all the Main Factors to start over._
+- But the user **still has the original device** (or the original Root Key in some other form), and therefore can reproduce the Backup Account Key and produce a signature with it.
 
-In that situation, the user can sign a `/v1/reset` challenge with the backup-account secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then deletes the backup metadata, the sealed blob, and all factor lookup entries. The user can then run [BF-1](/world-app/backup/flows#bf-1-backup-creation) again from scratch.
+In that situation, the user can sign a `/v1/reset` challenge with the Backup Account Key's secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then wipes the backup so the user can re-enroll from scratch.
 
-This is **not** a recovery of the existing backup contents; it's a clean wipe that lets the user re-enroll without an _"Account already exists" collision. The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup*. 
+This is **not** a recovery of the existing backup contents. It's a clean wipe that lets the user re-enroll fresh (otherwise the system would reject duplicate backups). The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their root key, PCPs and credential vault.
 
-Also important to note that this Disaster Recovery option does **NOT** have any effect on Turnkey, which means the <FactorSecret /> stored in Turnkey will be preserved. This is because without access to a <MainFactor /> or <SyncFactor />, the user cannot trigger a Turnkey deletion. This is mostly a housekeeping concern as with a deleted backup the ciphertext is permanently deleted.
+`/v1/reset` wipes the state across the board, and primarily: the entire `backup-service` state for the user (remote ciphertext backup), and their Turnkey sub-organization. The backup-service deletion is authoritative; the Turnkey teardown is described below.
+
+## Registering the break_glass_user
+
+The teardown is only possible if the sub-organization has a `break_glass_user` (see [Components & Parties — Turnkey](/world-app/backup/components#turnkey)).
+
+<Note>Support for deleting the stale Turnkey sub-organization was introduced around August 2026. Accounts set up before then initially could not be deleted — they had no `break_glass_user`, and the user (having lost every Main and Sync Factor) cannot authenticate any other way. Those accounts become deletable once a migration backfills the `break_glass_user`.</Note>
+
+## Tearing down the Turnkey sub-organization
+
+After the backup-service reset completes, the client tears down the Turnkey sub-organization by first resolving the Turnkey sub-organization ID using the [Auth Proxy](https://docs.turnkey.com/features/authentication/auth-proxy)'s endpoint `POST https://authproxy.turnkey.com/v1/account`, then sending a `deleteSubOrganization` stamped with the Backup Account Key (which is represented as the `break_glass_user` in Turnkey).
+
+**Best-effort.** A Turnkey failure does **not** fail the reset. The `backup-service` deletion is authoritative and the user can still re-enroll.

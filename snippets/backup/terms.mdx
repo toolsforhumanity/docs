@@ -50,6 +50,12 @@ export const FactorSecret = () => {
 
 export const BackupAccountId = () => {
     return (
-        <Tooltip tip="A deterministic identifier of the form backup_account_0..., derived from the user's Root Key. The corresponding secp256k1 keypair is the disaster-recovery key for /reset.">Backup Account ID</Tooltip>
+        <Tooltip tip="A deterministic identifier of the form backup_account_..., encoding the public key of the Backup Account Key (which is derived from the user's Root Key).">Backup Account ID</Tooltip>
+    )
+}
+
+export const BackupAccountKey = () => {
+    return (
+        <Tooltip tip="The secp256k1 keypair derived deterministically from the user's Root Key. Its public key is encoded into the Backup Account ID; it is the disaster-recovery key that authorizes /v1/reset and the deletion of the user's Turnkey sub-organization.">Backup Account Key</Tooltip>
     )
 }

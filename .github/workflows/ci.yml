@@ -16,14 +16,20 @@ jobs:
       - name: Extract pnpm version from package.json
         id: get-pnpm-version
         run: |
-          echo "version=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*$/\1/')" >> $GITHUB_OUTPUT
+          echo "version=$(jq -r '.packageManager' package.json | sed -E 's/^pnpm@([0-9.]+).*$/\1/')" >> "$GITHUB_OUTPUT"
       
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: ${{ steps.get-pnpm-version.outputs.version }}
           run_install: false
-      
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       

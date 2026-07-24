@@ -4,7 +4,7 @@ sidebarTitle: "Components & Parties"
 description: "What the Backup Service and Turnkey actually do, what they store, and where their authority ends."
 ---
 
-import { SyncFactor, MainFactor, BackupMetadata, SealedBackup, FactorSecret, BackupEncryptionKeypair, BackupAccountId } from "/snippets/backup/terms.mdx";
+import { SyncFactor, MainFactor, BackupMetadata, SealedBackup, FactorSecret, BackupEncryptionKeypair, BackupAccountKey } from "/snippets/backup/terms.mdx";
 
 # Backup Service
 
@@ -52,7 +52,7 @@ A handful of named errors are surfaced in client code paths and worth knowing by
 - `manifest_hash_mismatch` — client tried to sync from a stale state (see [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)).
 - `unauthorized_factor` — factor identifier is in `FactorLookup` but no longer in the backup metadata; the device is no longer authorized (see [Unauthorized Device](/world-app/backup/advanced#unauthorized-device)).
 - `backup_does_not_exist` — the metadata is gone (the user deleted their backup); local state should be cleared.
-- `backup_account_id_already_exists` — `/create` collision; some prior creation attempt registered this backup ID. The client retries with a fresh sync factor authorization on the existing record.
+- `backup_account_id_already_exists` — `/v1/create` collision; some prior creation attempt registered this backup ID. The client retries with a fresh sync factor authorization on the existing record.
 - `factor_already_exists` — attempted to add a factor whose public identifier is already enrolled.
 - `invalid_challenge_context` — challenge token didn't match the operation it was submitted for.
 
@@ -68,29 +68,38 @@ The full enumeration is in [`backup-service/src/types/error.rs`](https://github.
 
 <Info>The initial release of this feature relied on a slightly different user setup. Some early World App Users will have a slightly different setup (with the Root Quorum being `auth_user_main` solely) before a migration is introduced.</Info>
 
-Each World App user is a Turnkey *sub-organization*. The sub-organization has three users with distinct roles:
+Each World App user is a Turnkey *sub-organization*. Throughout the docs and the code, the terms "Turnkey sub-organization" and "Turnkey account" are used interchangeably. The sub-organization has four users with distinct roles:
 
 1. **Ephemeral.** A `root_user_genesis` user is created by World App's backend to bootstrap the sub-organization.
    - It is a root user.
    - It is created with a short-lived keypair provided by the client.
    - It is also registered with a fallback `0` key (`Curve25519`) because Turnkey requires every user to have at least one valid authenticator. After the genesis user is no longer needed, the keypair is discarded — the fallback key remains but no one holds its private half.
    - The client deletes this user immediately after `auth_user_main` is set up.
-2. **`auth_user_main`** — represents the user's primary authentication and holds their <MainFactor /> credentials (passkeys and OIDC providers).
+2. **`auth_user_main`**. Represents the user's primary authentication and holds their <MainFactor /> credentials (passkeys and OIDC providers).
    - Permission policy: explicit `ALLOW` for all activities (`condition = true`).
 
    ```json
    {
      "effect": "EFFECT_ALLOW",
-     "consensus": "approvers.any(user, user.id == '<authUserMainId>')",
+     "consensus": "approvers.any(user, user.id == '<auth_user_main_id>')",
      "condition": "true"
    }
    ```
-3. **`sync_factor_user`** — represents <SyncFactor /> operations. One long-lived API keypair is registered per device (each device holds its own private key locally; all are attached to the same user). The user's policy permits *deletion-only* activities, so a Sync Factor cannot grant itself recovery powers.
+3. **`break_glass_user`**. Represents the <BackupAccountKey /> — the `secp256k1` keypair whose public key is encoded into the [**Backup Account ID**](/world-app/backup/factors#backup-account-id). It exists so the Turnkey sub-organization can be deleted during a [Reset](/world-app/backup/advanced#disaster-recovery-via-v1-reset). Because the Backup Account Key is deterministic and known ahead of time, this user is named `break_glass_user_<last 6 hex chars of the Backup Account Key's public key>`. It is **not** a member of the Root Quorum. The user's policy permits *deletion-only* of the sub-organization:
 
    ```json
    {
      "effect": "EFFECT_ALLOW",
-     "consensus": "approvers.any(user, user.id == '<syncFactorUserId>')",
+     "consensus": "approvers.any(user, user.id == '<break_glass_user_id>')",
+     "condition": "activity.type == 'ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION'"
+   }
+   ```
+4. **`sync_factor_user`**. Represents <SyncFactor /> operations. One long-lived API keypair is registered per device (each device holds its own private key locally; all are attached to the same user). The user's policy permits *deletion-only* activities, so a Sync Factor cannot grant itself recovery powers.
+
+   ```json
+   {
+     "effect": "EFFECT_ALLOW",
+     "consensus": "approvers.any(user, user.id == '<sync_factor_user_id>')",
      "condition": "activity.action == 'DELETE' && (activity.resource == 'CREDENTIAL' || activity.resource == 'PRIVATE_KEY' || activity.resource == 'ORGANIZATION')"
    }
    ```
