@@ -28,8 +28,8 @@ It does **not**:
 ## Storage layout
 
 - **S3** — <SealedBackup /> blobs and <BackupMetadata /> JSON, keyed by `backup_id`.
-- **DynamoDB** — A `FactorLookup` table mapping `{scope}#{type}#{factor_value}` (e.g. `MAIN#PASSKEY#<credential_id>`) back to `backup_id`. This is a lookup utility — the source of truth for *which factors authorize a backup* is the metadata in S3.
-- **Redis** — Ephemeral state: JWE-encrypted challenge tokens (single-use, ~5 min TTL), short-lived per-`backup_id` locks during create/sync, and post-recovery `sync_factor_token`s used to register a new <SyncFactor /> without re-prompting a Main Factor.
+- **DynamoDB** — A `FactorLookup` table using a composite primary key combining the scope (MAIN/SYNC) and a factor identifier (credential ID for passkey, iss+sub for OIDC, public key for EC keypair) mapping back to `backup_id`. This is a lookup utility — the source of truth for *which factors authorize a backup* is the metadata in S3.
+- **Redis** — Ephemeral state: used-challenge hashes for replay protection (15 min TTL), hashed OIDC nonces (1 year TTL), short-lived per-`backup_id` locks during create/sync, and post-recovery `sync_factor_token`s used to register a new <SyncFactor /> without re-prompting a Main Factor.
 
 The list of endpoints, request shapes, and the `ChallengeContext` enum live in [`backup-service/src/routes`](https://github.com/worldcoin/backup-service/tree/main/src/routes); the OpenAPI spec is served at `/docs` on each environment.
 
@@ -40,10 +40,10 @@ Three factor types are recognized:
 | Factor type | Verification | Allowed scope |
 | --- | --- | --- |
 | Passkey | WebAuthn assertion (COSE `ES256`) verified via `webauthn-rs` | Main only |
-| OIDC account | OIDC token signature + claim verification (nonce = SHA256(ephemeral session pubkey)) | Main only |
+| OIDC account | OIDC token signature + claim verification ([nonce = SHA256(ephemeral session pubkey)](https://docs.turnkey.com/authentication/social-logins#nonce-restrictions-in-oidc-tokens)) | Main only |
 | EC keypair (P-256) | ECDSA signature, DER-encoded, verified with `p256` | Main or Sync |
 
-The challenge token is bound to the operation. A `Sync` challenge cannot be replayed against `/delete-factor` because the embedded `ChallengeContext` differs. Challenges are single-use (Redis enforces).
+The challenge token is bound to the operation. A `Sync` challenge cannot be replayed against `/v1/delete-factor` because the embedded `ChallengeContext` differs. Challenges are single-use (Redis enforces).
 
 ## What the service rejects
 
@@ -52,7 +52,7 @@ A handful of named errors are surfaced in client code paths and worth knowing by
 - `manifest_hash_mismatch` — client tried to sync from a stale state (see [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)).
 - `unauthorized_factor` — factor identifier is in `FactorLookup` but no longer in the backup metadata; the device is no longer authorized (see [Unauthorized Device](/world-app/backup/advanced#unauthorized-device)).
 - `backup_does_not_exist` — the metadata is gone (the user deleted their backup); local state should be cleared.
-- `backup_account_id_already_exists` — `/create` collision; some prior creation attempt registered this backup ID. The client retries with a fresh sync factor authorization on the existing record.
+- `backup_account_id_already_exists` — `/v1/create` collision; some prior creation attempt registered this backup ID. The client retries with a fresh sync factor authorization on the existing record.
 - `factor_already_exists` — attempted to add a factor whose public identifier is already enrolled.
 - `invalid_challenge_context` — challenge token didn't match the operation it was submitted for.
 
@@ -85,7 +85,7 @@ Each World App user is a Turnkey *sub-organization*. Throughout the docs and the
      "condition": "true"
    }
    ```
-3. **`break_glass_user`**. Represents the <BackupAccountKey /> — the `secp256k1` keypair whose public key is encoded into the [**Backup Account ID**](/world-app/backup/factors#backup-account-id). It exists so the Turnkey sub-organization can be deleted during a [Reset](/world-app/backup/advanced#disaster-recovery-via-reset). Because the Backup Account Key is deterministic and known ahead of time, this user is named `break_glass_user_<last 6 hex chars of the Backup Account Key's public key>`. It is **not** a member of the Root Quorum. The user's policy permits *deletion-only* of the sub-organization:
+3. **`break_glass_user`**. Represents the <BackupAccountKey /> — the `secp256k1` keypair whose public key is encoded into the [**Backup Account ID**](/world-app/backup/factors#backup-account-id). It exists so the Turnkey sub-organization can be deleted during a [Reset](/world-app/backup/advanced#disaster-recovery-via-v1-reset). Because the Backup Account Key is deterministic and known ahead of time, this user is named `break_glass_user_<last 6 hex chars of the Backup Account Key's public key>`. It is **not** a member of the Root Quorum. The user's policy permits *deletion-only* of the sub-organization:
 
    ```json
    {

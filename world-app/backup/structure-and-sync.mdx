@@ -54,12 +54,12 @@ When building a new backup version (see [BF-4: Sync](/world-app/backup/flows#bf-
 1. Validate the local manifest exists and matches the remote state.
 2. Build the <UnsealedBackup /> from the files referenced in the manifest. Verify each file's checksum.
 3. Encrypt with the <SealedBackup />'s keypair public key.
-4. POST `/sync` with the new <SealedBackup />, the current manifest hash, and the new manifest hash.
+4. POST `/v1/sync` with the new <SealedBackup />, the current manifest hash, and the new manifest hash.
 5. Backup Service checks the current hash matches its recorded state, then atomically swaps the blob and the recorded hash.
 
 # Download & Unpack
 
-When restoring or catching up (see [BF-2](/world-app/backup/flows#bf-2-backup-recovery) and [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)):
+When restoring or catching up (see [BF-2](/world-app/backup/flows#bf-2-backup-retrieval) and [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)):
 
 1. Decrypt the <SealedBackup /> with the <MainFactor />-unlocked <BackupEncryptionKeypair />.
 2. Replace the local manifest unconditionally with the manifest from the unpacked backup.

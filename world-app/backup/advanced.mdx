@@ -13,8 +13,8 @@ All asymmetric encryption in the backup uses libsodium's [sealed box](https://do
 
 Two distinct seals exist in the system:
 
-- **Sealing the <UnsealedBackup />.** Done with the public key of the freshly-generated <BackupEncryptionKeypair /> (X25519). The result is the <SealedBackup />. The keypair's secret key is destroyed after this seal, so even the original device cannot decrypt the <SealedBackup /> without going through a Main Factor.
-- **Sealing the <BackupEncryptionKeypair />.** Done once per Main Factor, with a public key derived from that factor's <FactorSecret /> (the secret is hashed into a Curve25519 secret key). The result is an <EncryptedBackupEncryptionKeypair /> stored in the <BackupMetadata />.
+- **Sealing the <UnsealedBackup />.** Done with the public key of the freshly-generated <BackupEncryptionKeypair /> (`Curve25519`). The result is the <SealedBackup />. The keypair's secret key is destroyed after this seal, so even the original device cannot decrypt the <SealedBackup /> without going through a Main Factor.
+- **Sealing the <BackupEncryptionKeypair />.** Done once per Main Factor, with a public key derived from that factor's <FactorSecret /> (the secret is encoded to a `Curve25519` point with modular reduction). The result is an <EncryptedBackupEncryptionKeypair /> stored in the <BackupMetadata />.
 
 Randomness for ephemeral keys comes from the OS CSPRNG via Bedrock's `OsRng`. See [Cryptography](/world-app/cryptography).
 
@@ -39,13 +39,13 @@ Triggers:
 - The user lost their <SyncFactor /> (e.g., the device was reset).
 - (Future) The user explicitly revoked authorization for a specific device.
 
-The remediation path is always the same: re-authenticate a <MainFactor /> and register a fresh <SyncFactor /> via `/add-sync-factor`. The clients have explicit handling at three call sites:
+The remediation path is always the same: re-authenticate a <MainFactor /> and register a fresh <SyncFactor /> via `/v1/add-sync-factor`. The clients have explicit handling at three call sites:
 
-1. On `/create` returning `backup_account_id_already_exists`, prompt for a Main Factor and run the recovery-style sync-factor refresh — this turns a duplicate creation attempt into an idempotent re-authorization.
-2. On `/retrieve-metadata` returning `unauthorized_factor`, prompt for a Main Factor and refresh the Sync Factor. If `backup_does_not_exist` is returned instead, the backup has been deleted and the local state is wiped.
-3. On `/delete-factor` returning `PUBLIC_KEY_NOT_FOUND` from Turnkey, fall back to the user's Passkey to perform the Turnkey operation, then continue with the Backup Service deletion.
+1. On `/v1/create` returning `backup_account_id_already_exists`, prompt for a Main Factor and run the recovery-style sync-factor refresh — this turns a duplicate creation attempt into an idempotent re-authorization.
+2. On `/v1/retrieve-metadata` returning `unauthorized_factor`, prompt for a Main Factor and refresh the Sync Factor. If `backup_does_not_exist` is returned instead, the backup has been deleted and the local state is wiped.
+3. On `/v1/delete-factor` returning `PUBLIC_KEY_NOT_FOUND` from Turnkey, fall back to the user's Passkey to perform the Turnkey operation, then continue with the Backup Service deletion.
 
-<Note>Error handling on `/add-factor` and `/delete-factor` against the Backup Service does not need its own unauthorized-factor branch because every such call is preceded by `/retrieve-metadata`, which surfaces the condition first.</Note>
+<Note>Error handling on `/v1/add-factor` and `/v1/delete-factor` against the Backup Service does not need its own unauthorized-factor branch because every such call is preceded by `/v1/retrieve-metadata`, which surfaces the condition first.</Note>
 
 ## Stale Local Backup
 
@@ -55,7 +55,7 @@ If the local manifest hash differs from the remote on app startup or before a sy
 
 Removing the last <MainFactor /> deletes the entire backup (the data is no longer recoverable). The Backup Service enforces this server-side; clients confirm with the user before issuing the request. See [BF-7](/world-app/backup/flows#bf-7-factor-deletion) and [BF-8](/world-app/backup/flows#bf-8-backup-deletion).
 
-# Disaster Recovery via /reset
+# Disaster Recovery via /v1/reset
 
 The <BackupAccountKey /> (secp256k1, derived deterministically from the <RootKey />) is a last-resort recovery mechanism for the case where:
 
@@ -63,15 +63,17 @@ The <BackupAccountKey /> (secp256k1, derived deterministically from the <RootKey
 - The user has *also* lost every <SyncFactor /> (no authorized device). _If they have a Sync Factor they can simply remove all the Main Factors to start over._
 - But the user **still has the original device** (or the original Root Key in some other form), and therefore can reproduce the Backup Account Key and produce a signature with it.
 
+In that situation, the user can sign a `/v1/reset` challenge with the Backup Account Key's secret key. The Backup Service verifies the signature against the public key encoded in the `backup_account_id`, then wipes the backup so the user can re-enroll from scratch.
+
 This is **not** a recovery of the existing backup contents. It's a clean wipe that lets the user re-enroll fresh (otherwise the system would reject duplicate backups). The Root Key (and therefore the wallet and on-chain identity) is preserved because the user already has it locally; what they're rebuilding is the *backup* of their root key, PCPs and credential vault.
 
-`/reset` wipes the state across the board, and primarily: the entire `backup-service` state for the user (remote ciphertext backup), and their Turnkey sub-organization. The backup-service deletion is authoritative; the Turnkey teardown is described below.
+`/v1/reset` wipes the state across the board, and primarily: the entire `backup-service` state for the user (remote ciphertext backup), and their Turnkey sub-organization. The backup-service deletion is authoritative; the Turnkey teardown is described below.
 
 ## Registering the break_glass_user
 
 The teardown is only possible if the sub-organization has a `break_glass_user` (see [Components & Parties — Turnkey](/world-app/backup/components#turnkey)).
 
-<Note>Support for deleting the stale Turnkey sub-organization was introduced around August 2026. Accounts set up before then initially could not be deleted — they had no `break_glass_user`, and the user (having lost every Main and Sync Factor) cannot authenticate any other way. Those accounts become deletable once the migration above backfills the `break_glass_user`.</Note>
+<Note>Support for deleting the stale Turnkey sub-organization was introduced around August 2026. Accounts set up before then initially could not be deleted — they had no `break_glass_user`, and the user (having lost every Main and Sync Factor) cannot authenticate any other way. Those accounts become deletable once a migration backfills the `break_glass_user`.</Note>
 
 ## Tearing down the Turnkey sub-organization
 
