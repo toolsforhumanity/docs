@@ -71,9 +71,9 @@ This is **not** a recovery of the existing backup contents. It's a clean wipe th
 
 ## Registering the break_glass_user
 
-The teardown is only possible if the sub-organization has a `break_glass_user` (see [Components & Parties — Turnkey](/world-app/backup/components#turnkey)).
+The teardown is only possible if the sub-organization has a `break_glass_user` (see [Turnkey](/world-app/backup/components#turnkey)).
 
-<Note>Support for deleting the stale Turnkey sub-organization was introduced around August 2026. Accounts set up before then initially could not be deleted — they had no `break_glass_user`, and the user (having lost every Main and Sync Factor) cannot authenticate any other way. Those accounts become deletable once a migration backfills the `break_glass_user`.</Note>
+<Note>Support for deleting the stale Turnkey sub-organization was introduced around August 2026. Accounts set up before then initially could not be deleted as they had no `break_glass_user`, and the user (having lost every Main and Sync Factor) cannot authenticate any other way. Those accounts become deletable once a [migration](/world-app/backup/components#turnkey-migrations) backfills the `break_glass_user`.</Note>
 
 ## Tearing down the Turnkey sub-organization
 

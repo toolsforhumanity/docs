@@ -68,7 +68,9 @@ The full enumeration is in [`backup-service/src/types/error.rs`](https://github.
 
 <Info>The initial release of this feature relied on a slightly different user setup. Some early World App Users will have a slightly different setup (with the Root Quorum being `auth_user_main` solely) before a migration is introduced.</Info>
 
-Each World App user is a Turnkey *sub-organization*. Throughout the docs and the code, the terms "Turnkey sub-organization" and "Turnkey account" are used interchangeably. The sub-organization has four users with distinct roles:
+The setup below is the *expected* state; see [Turnkey Migrations](#turnkey-migrations) for how accounts created by older clients are reconciled to the latest expected state.
+
+Each World App user is a Turnkey *sub-organization*. Throughout the docs and the code, the terms "Turnkey sub-organization" and "Turnkey account" are used interchangeably. Its users fall into four distinct roles:
 
 1. **Ephemeral.** A `root_user_genesis` user is created by World App's backend to bootstrap the sub-organization.
    - It is a root user.
@@ -94,23 +96,30 @@ Each World App user is a Turnkey *sub-organization*. Throughout the docs and the
      "condition": "activity.type == 'ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION'"
    }
    ```
-4. **`sync_factor_user`**. Represents <SyncFactor /> operations. One long-lived API keypair is registered per device (each device holds its own private key locally; all are attached to the same user). The user's policy permits *deletion-only* activities, so a Sync Factor cannot grant itself recovery powers.
+4. **`sync_factor_user_<suffix>`**. Represents <SyncFactor /> operations. Each device gets its own user, holding that device's long-lived API keypair, and its own policy bound to it. Every such policy permits *deletion-only* activities, so a Sync Factor cannot grant itself recovery powers.
+  <Note>While the <SyncFactor /> has permissions to delete credentials (e.g. passkey or OIDC factors), it cannot do so on `auth_user_main` because Turnkey rejects updates from non-root users for root users even when granted by a policy. This is a current limitation with the Turnkey setup, the user must authenticate with a <MainFactor /> to remove an OIDC Factor or use the `/reset` disaster recovery.</Note>
 
    ```json
    {
      "effect": "EFFECT_ALLOW",
      "consensus": "approvers.any(user, user.id == '<sync_factor_user_id>')",
-     "condition": "activity.action == 'DELETE' && (activity.resource == 'CREDENTIAL' || activity.resource == 'PRIVATE_KEY' || activity.resource == 'ORGANIZATION')"
+     "condition": "activity.action == 'DELETE' && (activity.resource == 'CREDENTIAL' || activity.resource == 'PRIVATE_KEY' || activity.resource == 'ORGANIZATION' || activity.resource == 'USER')"
    }
    ```
 
-   > The policy filters on `activity.action` and `activity.resource` instead of `activity.type` because the latter is version-specific. The current expansion covers `ACTIVITY_TYPE_DELETE_API_KEYS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_AUTHENTICATORS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION` (`ORGANIZATION`), `ACTIVITY_TYPE_DELETE_PRIVATE_KEYS` (`PRIVATE_KEY`), `ACTIVITY_TYPE_DELETE_PRIVATE_KEY_TAGS` (`PRIVATE_KEY`), `ACTIVITY_TYPE_DISABLE_PRIVATE_KEY` (`PRIVATE_KEY`).
+   > The policy filters on `activity.action` and `activity.resource` instead of `activity.type` because the latter is version-specific. The current expansion covers `ACTIVITY_TYPE_DELETE_API_KEYS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_AUTHENTICATORS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_OAUTH_PROVIDERS` (`CREDENTIAL`), `ACTIVITY_TYPE_DELETE_SUB_ORGANIZATION` (`ORGANIZATION`), `ACTIVITY_TYPE_DELETE_USERS` (`USER`), `ACTIVITY_TYPE_DELETE_PRIVATE_KEYS` (`PRIVATE_KEY`), `ACTIVITY_TYPE_DELETE_PRIVATE_KEY_TAGS` (`PRIVATE_KEY`), `ACTIVITY_TYPE_DISABLE_PRIVATE_KEY` (`PRIVATE_KEY`).
 
-In addition, Turnkey has the concept of a [Root Quorum](https://docs.turnkey.com/concepts/users/root-quorum). When the Root Quorum is met, any action bypasses the Policy Engine. We set the Root Quorum to 2-of-2 with both `auth_user_main` and `sync_factor_user` as members. This ensures:
+   > `USER` lets a Sync Factor delete itself on logout and clean up stale sibling Sync Factor users. It cannot delete `auth_user_main` because Root Quorum validation rejects that.
 
-- `sync_factor_user` can update `auth_user_main` *as granted by its policy* (delete OAuth providers, delete authenticators).
-- `sync_factor_user` cannot take any action *not* explicitly granted by the policy, because it cannot reach the Root Quorum on its own — Root Quorum still requires `auth_user_main`'s approval.
-- A user can always update `sync_factor_user` from `auth_user_main` after losing all devices.
+In addition, Turnkey has the concept of a [Root Quorum](https://docs.turnkey.com/concepts/users/root-quorum). When the Root Quorum is met, any action bypasses the Policy Engine. We set the Root Quorum to 1-of-1 with `auth_user_main` as its sole member.
+
+## Turnkey Migrations
+
+A sub-organization is created once, by whichever client version the user onboarded with, and is only writable by the user's own factors. So when the expected setup above changes, only the client can update the account state. Bedrock's `TurnkeyManager.run_migrations` is the mechanism that does this: clients call it after every login and periodically, and it applies only the difference between the account and the expected state. An account already in shape performs zero writes.
+
+Reads are stamped by the <SyncFactor />; changes need a <MainFactor />. When no Main Factor is supplied the user is prompted to authenticate. See [BF-10](/world-app/backup/flows#bf-10-turnkey-account-reconciliation).
+
+The migration list, the per-environment audience tables, and the safety guards that make each migration skip rather than guess live in [`bedrock/src/backup/turnkey`](https://github.com/worldcoin/bedrock/tree/main/bedrock/src/backup/turnkey).
 
 ## What Turnkey holds vs what the Backup Service holds
 
