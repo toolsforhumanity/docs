@@ -44,7 +44,9 @@ Supported providers:
 - **Google** (iOS, Android)
 - **Apple** (iOS, Android)
 
-The client uses Bedrock's `Turnkey` helper (P-256 ECDSA stamping over Turnkey API requests) to interact with the enclave. See [Components & Parties — Turnkey](/world-app/backup/components#turnkey) for the sub-organization structure (root user, auth user, sync factor user, root quorum) and policy details.
+<Note>Apple issues a distinct `aud` per client, so an Apple factor has to be registered once per client: World App iOS, World ID iOS, and Android (which authenticates through a webview, so all Android clients share one audience). Apple assigns the same `sub` across a developer account, so the audiences all resolve to the same identity. Accounts missing an audience are backfilled by the [Turnkey Migrations](/world-app/backup/components#turnkey-migration).</Note>
+
+The client uses Bedrock's `Turnkey` helper (P-256 ECDSA stamping over Turnkey API requests) to interact with the enclave. See [Turnkey](/world-app/backup/components#turnkey) for the sub-organization structure (root user, auth user, sync factor user, root quorum) and policy details.
 
 ## iCloud Keychain (iOS only)
 
@@ -61,7 +63,7 @@ The Sync Factor is a P-256 ECDSA keypair generated client-side at backup creatio
 
 When the client signs a Backup Service challenge with the Sync Factor, the server verifies the P-256 ECDSA signature (DER-encoded) against the public key in the <BackupMetadata />. Each Sync Factor authorizes exactly one device; recovery onto a new device produces a new Sync Factor and registers it via `/v1/add-sync-factor`.
 
-For OIDC users, the Sync Factor is *also* registered with Turnkey as a sub-organization user (`sync_factor_user`) with a policy permitting deletion-only actions. This is what makes background factor cleanup (e.g., removing an OIDC provider after the user removes the factor in Settings) possible without an additional passkey tap.
+For OIDC users, the Sync Factor is *also* registered with Turnkey as a sub-organization user (`sync_factor_user_<suffix>`, one per device) with a policy permitting deletion-only actions. This is what makes some background housekeeping operations possible without an additional login (e.g. deleting a backup).
 
 # Backup Account ID
 

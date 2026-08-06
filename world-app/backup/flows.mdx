@@ -116,3 +116,11 @@ This is not a separate flow but a consequence of BF-4 and BF-5 interacting. See 
 
 1. The Backup Service `/v1/reset` deletes the metadata, sealed blob, and factor-lookup entries. This deletion is authoritative.
 2. The Turnkey sub-organization is torn down. The client submits a `deleteSubOrganization` activity stamped with the Backup Account Key acting as the `break_glass_user`.
+
+# BF-10: Turnkey Account Migration
+
+**When.** After every login, and periodically thereafter. Not user-initiated.
+
+**Non-obvious.** This is housekeeping, not a user flow, but it is the only mechanism that can correct a Turnkey sub-organization created by an older client or that has unexpectedly drifted as nothing server-side has the authority to write to it. The client calls Bedrock's `TurnkeyManager.run_migrations` with the <SyncFactor /> and, when available, a <MainFactor />.
+
+Migrations mostly require a <MainFactor /> to write, which the client does not have outside a login. So if a <MainFactor /> is required, the user is prompted to authenticate, similar to the **Authorize Device** flow. See [Turnkey Migrations](/world-app/backup/components#turnkey-migrations).
