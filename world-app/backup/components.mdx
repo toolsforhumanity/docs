@@ -97,7 +97,8 @@ Each World App user is a Turnkey *sub-organization*. Throughout the docs and the
    }
    ```
 4. **`sync_factor_user_<suffix>`**. Represents <SyncFactor /> operations. Each device gets its own user, holding that device's long-lived API keypair, and its own policy bound to it. Every such policy permits *deletion-only* activities, so a Sync Factor cannot grant itself recovery powers.
-  <Note>While the <SyncFactor /> has permissions to delete credentials (e.g. passkey or OIDC factors), it cannot do so on `auth_user_main` because Turnkey rejects updates from non-root users for root users even when granted by a policy. This is a current limitation with the Turnkey setup, the user must authenticate with a <MainFactor /> to remove an OIDC Factor or use the `/reset` disaster recovery.</Note>
+
+   <Note>While the <SyncFactor /> has permissions to delete credentials (e.g. passkey or OIDC factors), it cannot do so on `auth_user_main` because Turnkey rejects updates from non-root users for root users even when granted by a policy. This is a current limitation with the Turnkey setup, the user must authenticate with a <MainFactor /> to remove an OIDC Factor or use the `/reset` disaster recovery.</Note>
 
    ```json
    {
@@ -117,7 +118,7 @@ In addition, Turnkey has the concept of a [Root Quorum](https://docs.turnkey.com
 
 A sub-organization is created once, by whichever client version the user onboarded with, and is only writable by the user's own factors. So when the expected setup above changes, only the client can update the account state. Bedrock's `TurnkeyManager.run_migrations` is the mechanism that does this: clients call it after every login and periodically, and it applies only the difference between the account and the expected state. An account already in shape performs zero writes.
 
-Reads are stamped by the <SyncFactor />; changes need a <MainFactor />. When no Main Factor is supplied the user is prompted to authenticate. See [BF-10](/world-app/backup/flows#bf-10-turnkey-account-reconciliation).
+Reads are stamped by the <SyncFactor />; changes need a <MainFactor />. When no Main Factor is supplied the user is prompted to authenticate. See [BF-10](/world-app/backup/flows#bf-10-turnkey-account-migration).
 
 The migration list, the per-environment audience tables, and the safety guards that make each migration skip rather than guess live in [`bedrock/src/backup/turnkey`](https://github.com/worldcoin/bedrock/tree/main/bedrock/src/backup/turnkey).
 
