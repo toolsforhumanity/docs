@@ -45,6 +45,40 @@ Three factor types are recognized:
 
 The challenge token is bound to the operation. A `Sync` challenge cannot be replayed against `/v1/delete-factor` because the embedded `ChallengeContext` differs. Challenges are single-use (Redis enforces).
 
+## Request attestation
+
+The three most sensitive endpoints are additionally gated by an **attestation gateway token** that binds a device-integrity attestation (Apple App Attest / Google Play Integrity) to the *specific request* being made:
+
+- `POST /v1/retrieve/from-challenge`
+- `POST /v1/verify-factor`
+- `POST /v1/delete-factor`
+
+The client obtains a JWT from the Attestation Gateway and sends it in the `attestation-token` header. The token's `jti` claim is a **request hash**; the Backup Service independently recomputes that hash from the request it receives and rejects the request when it does not match. The validator lives in [`backup-service/src/attestation_gateway.rs`](https://github.com/worldcoin/backup-service/blob/main/src/attestation_gateway.rs).
+
+### Request hash
+
+The request hash is the hex-encoded `SHA-256` of a canonical JSON object built from three fields (nested object keys recursively sorted alphabetically):
+
+| Field | Value |
+| --- | --- |
+| `body` | the request body, re-parsed and key-sorted (omitted for empty bodies) |
+| `method` | the uppercase HTTP method, e.g. `"POST"` |
+| `pathUri` | the **full** request path (see warning below) |
+
+Client and server must produce byte-identical canonical JSON. The shared implementation is Oxide's `AttestRequestHasher::generate_json_request_hash`, used by World App iOS, World App Android, and the Backup Service.
+
+<Warning>
+`pathUri` is the **full** request path, **including the `/v1` API-version prefix** — e.g. `/v1/retrieve/from-challenge`, never `/retrieve/from-challenge`. Because the routes are mounted under an axum `.nest("/v1", …)`, the server must hash the *original, pre-routing* path (via `OriginalUri`), not the post-nest path, or the hash will not match the clients.
+</Warning>
+
+<Note>
+Absent fields are **omitted** from the body, never serialized as `null`. Client and server treat an absent field and an explicit `null` differently when hashing, so a `null` causes a mismatch.
+</Note>
+
+### Enforcement
+
+Enforcement is controlled by a server-side flag. While **disabled**, the service still validates the token but, on failure, lets the request through and returns the reason in an `attestation-failure` response header — so clients and dashboards can detect drift before enforcement is enabled. While **enabled**, a failed validation rejects the request.
+
 ## What the service rejects
 
 A handful of named errors are surfaced in client code paths and worth knowing by name:
