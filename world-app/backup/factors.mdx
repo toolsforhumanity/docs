@@ -58,12 +58,22 @@ iCloud Keychain is intentionally **not** synced (`kSecAttrSynchronizable: false`
 
 The Sync Factor is a P-256 ECDSA keypair generated client-side at backup creation (and again on every recovery onto a new device). The public key is registered with the Backup Service; the private key is stored locally in platform-secure storage:
 
-- **iOS** — Keychain (non-synced).
+- **iOS**: Eligible enrollment uses a device-only Secure Enclave P-256 key. The private key never leaves the enclave; the client exports only the public key and requests signatures through a key reference. The key is permanent, non-synchronized, and accessible only while the device is unlocked (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). Simulator tests use a Keychain-backed key instead. Existing devices retain the legacy non-synchronized Keychain factor until migration is admitted and its replacement is confirmed.
 - **Android** — Android Keystore (hardware-backed when available); falls back to `EncryptedSharedPreferences` if Keystore is unavailable. The fallback is a lower security tier and accepted as a known limitation today.
 
 When the client signs a Backup Service challenge with the Sync Factor, the server verifies the P-256 ECDSA signature (DER-encoded) against the public key in the <BackupMetadata />. Each Sync Factor authorizes exactly one device; recovery onto a new device produces a new Sync Factor and registers it via `/v1/add-sync-factor`.
 
 For OIDC users, the Sync Factor is *also* registered with Turnkey as a sub-organization user (`sync_factor_user_<suffix>`, one per device) with a policy permitting deletion-only actions. This is what makes some background housekeeping operations possible without an additional login (e.g. deleting a backup).
+
+## iOS enrollment and replacement
+
+A new Secure Enclave key stays **pending** until its Backup Service registration and, for accounts with OIDC factors, its Turnkey user and deletion-only policy are confirmed. The registration record binds the attempt to the backup ID, exact public key, and Turnkey sub-organization. An uncertain response retains that key for reconciliation; it does not authorize a different key or backup. See [BF-1](/world-app/backup/flows#bf-1-backup-creation) and [BF-2](/world-app/backup/flows#bf-2-backup-retrieval).
+
+An active Secure Enclave factor is preferred over the legacy Keychain factor. During legacy replacement, the client confirms and activates the new factor before removing the legacy Turnkey user, legacy Backup Service registration, and finally the local legacy credential. Failed cleanup remains retryable and retains the local legacy credential until remote cleanup completes.
+
+The `backup_enable_secure_enclave_sync_factor` gate admits new enrollment. It does not trigger eager migration at startup. Pending attempts can finish after the gate is disabled, and active enclave keys remain preferred. Disabling admission does not convert those keys back to exportable Keychain keys; a binary rollback must retain support for already migrated keys. An eligible flow needs the authorization to complete both registrations; a restore without the required Turnkey Main Factor session keeps the legacy path rather than starting a migration it cannot finish.
+
+The storage change does not change factor permissions or the backup format. A Sync Factor still cannot decrypt a backup or enroll Main Factors. Decryption still requires a Main Factor. Money and World ID retain their existing shared Sync Factor authorization on iOS; separate keys and authorization are follow-up work.
 
 # Backup Account ID
 
@@ -84,6 +94,6 @@ The clients diverge in places where the underlying platform requires it. The lis
 | Passkey API | `AuthenticationServices` (PRF on iOS 18+) | Credential Manager (`androidx.credentials`); PRF requires GMS 23.33+ and a PRF-supporting provider |
 | iCloud Keychain factor | Supported (Main Factor) | **Not available** — no platform equivalent |
 | OIDC providers | Google, Apple | Google, Apple |
-| Sync Factor secure storage | Keychain (non-synced) | Android Keystore; falls back to `EncryptedSharedPreferences` on devices without Keystore |
+| Sync Factor secure storage | Device-only Secure Enclave for eligible enrollment; legacy non-synced Keychain until replacement | Android Keystore; falls back to `EncryptedSharedPreferences` on devices without Keystore |
 | Passkey rename | iOS 26.2+ only | Provider-dependent |
 | OIDC sign-in | `GoogleSignInSDK` / `AppleSignInSDK` | `GetSignInWithGoogleOption` (Credential Manager) |
