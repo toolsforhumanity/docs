@@ -52,7 +52,7 @@ A handful of named errors are surfaced in client code paths and worth knowing by
 - `manifest_hash_mismatch` — client tried to sync from a stale state (see [BF-5](/world-app/backup/flows#bf-5-remote-update-detection)).
 - `unauthorized_factor` — factor identifier is in `FactorLookup` but no longer in the backup metadata; the device is no longer authorized (see [Unauthorized Device](/world-app/backup/advanced#unauthorized-device)).
 - `backup_does_not_exist` — the metadata is gone (the user deleted their backup); local state should be cleared.
-- `backup_account_id_already_exists` — `/v1/create` collision; some prior creation attempt registered this backup ID. The client retries with a fresh sync factor authorization on the existing record.
+- `backup_account_id_already_exists` — `/v1/create` collision; some prior creation attempt registered this backup ID. For a pending iOS Secure Enclave attempt, the client retains the same key and confirms its exact membership in authenticated metadata. An accepted creation still returns the duplicate-backup result; retrieving the contents requires a Main Factor (see [BF-1](/world-app/backup/flows#bf-1-backup-creation)).
 - `factor_already_exists` — attempted to add a factor whose public identifier is already enrolled.
 - `invalid_challenge_context` — challenge token didn't match the operation it was submitted for.
 
@@ -112,6 +112,18 @@ Each World App user is a Turnkey *sub-organization*. Throughout the docs and the
 
    > `USER` lets a Sync Factor delete itself on logout and clean up stale sibling Sync Factor users. It cannot delete `auth_user_main` because Root Quorum validation rejects that.
 
+### iOS Sync Factor registration retries
+
+Sync Factor API keys are registered with `API_KEY_CURVE_P256`; the separate Backup Account Key used by `break_glass_user` remains `secp256k1`.
+
+Creating a Sync Factor user and creating its deletion-only policy are **separate activities**. Either may succeed remotely even when its response is lost. When reconciling a pending iOS enrollment in an existing sub-organization, the client:
+
+1. Queries users for the pending key's exact public key. A reusable match must be unique, have the `sync_factor_user_` role name, and hold that key under `sync_keypair`. Duplicate or wrong-role matches fail rather than being adopted.
+2. Creates a user only when no matching user exists. After an uncertain create response, it queries again to recover the existing user ID.
+3. Queries policies for the exact expected `EFFECT_ALLOW`, deletion-only condition, and consensus bound to that user ID. An existing matching policy is reused; only a missing policy is created. After an uncertain policy-create response, it queries again before confirming success.
+
+The key remains pending if either registration cannot be confirmed. These queries and any missing creation require a Main Factor-authorized Turnkey session; the Sync Factor gains no new enrollment authority. Fresh sub-organization provisioning retains its existing rollback behavior rather than becoming a general resumable account-creation flow.
+
 In addition, Turnkey has the concept of a [Root Quorum](https://docs.turnkey.com/concepts/users/root-quorum). When the Root Quorum is met, any action bypasses the Policy Engine. We set the Root Quorum to 1-of-1 with `auth_user_main` as its sole member.
 
 ## Turnkey Migrations
@@ -129,7 +141,7 @@ The migration list, the per-environment audience tables, and the safety guards t
 | OIDC factor secrets (inside enclave) | <SealedBackup /> blob (encrypted) |
 | OIDC provider configurations | <BackupMetadata /> (encrypted keypair copies, factor list) |
 | Sub-organization membership (auth/sync users) | `FactorLookup` reverse index |
-| P-256 API keypairs (per-device sync factor) | Challenge state (Redis) |
+| P-256 API public keys (per-device sync factor; private keys remain on the device) | Challenge state (Redis) |
 
 Neither holds the <BackupEncryptionKeypair />'s secret key — that is destroyed at backup creation.
 
