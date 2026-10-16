@@ -67,11 +67,15 @@ For OIDC users, the Sync Factor is *also* registered with Turnkey as a sub-organ
 
 ## iOS enrollment and replacement
 
+<Note>
+Secure Enclave enrollment is controlled by a disabled-by-default rollout gate. The behavior below applies to eligible iOS enrollment; legacy Keychain factors remain supported.
+</Note>
+
 A new Secure Enclave key stays **pending** until its Backup Service registration and, for accounts with OIDC factors, its Turnkey user and deletion-only policy are confirmed. The registration record binds the attempt to the backup ID, exact public key, and Turnkey sub-organization. An uncertain response retains that key for reconciliation; it does not authorize a different key or backup. See [BF-1](/world-app/backup/flows#bf-1-backup-creation) and [BF-2](/world-app/backup/flows#bf-2-backup-retrieval).
 
-An active Secure Enclave factor is preferred over the legacy Keychain factor. During legacy replacement, the client confirms and activates the new factor before removing the legacy Turnkey user, legacy Backup Service registration, and finally the local legacy credential. Failed cleanup remains retryable and retains the local legacy credential until remote cleanup completes.
+An active Secure Enclave factor authorized for the current backup is preferred over the legacy Keychain factor. During legacy replacement, the client confirms and activates the new factor before removing the legacy Turnkey user, legacy Backup Service registration, and finally the local legacy credential. Failed cleanup remains retryable and retains the local legacy credential until remote cleanup completes.
 
-The `backup_enable_secure_enclave_sync_factor` gate admits new enrollment. It does not trigger eager migration at startup. Pending attempts can finish after the gate is disabled, and active enclave keys remain preferred. Disabling admission does not convert those keys back to exportable Keychain keys; a binary rollback must retain support for already migrated keys. An eligible flow needs the authorization to complete both registrations; a restore without the required Turnkey Main Factor session keeps the legacy path rather than starting a migration it cannot finish.
+The `backup_enable_secure_enclave_sync_factor` gate admits new enrollment. It does not trigger eager migration at startup. Pending attempts can finish after the gate is disabled, and active enclave keys authorized for the current backup remain preferred. Disabling admission does not convert those keys back to exportable Keychain keys; a binary rollback must retain support for already migrated keys. An eligible flow needs the authorization to complete both registrations; a restore without the required Turnkey Main Factor session keeps the legacy path rather than starting a migration it cannot finish. When restoring a different backup, an enclave key that is not authorized for that backup does not prevent registration through the legacy path if new enclave enrollment is disabled or the required Turnkey session is unavailable.
 
 The storage change does not change factor permissions or the backup format. A Sync Factor still cannot decrypt a backup or enroll Main Factors. Decryption still requires a Main Factor. Money and World ID retain their existing shared Sync Factor authorization on iOS; separate keys and authorization are follow-up work.
 
