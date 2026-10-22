@@ -1,0 +1,107 @@
+---
+title: "Commands"
+description: "Overview of current MiniKit commands for mini apps."
+---
+
+import { QRCodeGenerator } from "/snippets/qr-code-generator.jsx";
+
+Commands are async methods on `MiniKit`. Use `await MiniKit.<command>()` and handle the returned `{ executedWith, data }` result.
+
+<Note>
+  World ID verification is no longer a MiniKit command. Use
+  [`@worldcoin/idkit`](https://docs.world.org/world-id/idkit/mini-apps) for new verification flows.
+</Note>
+
+Try our preview mini app to get a sense of how commands work.
+
+{/*
+  The QR section below is wrapped in <Visibility for="humans"> (rendered on the
+  web, excluded from the copy-page/.md export) with a plain-markdown twin in
+  <Visibility for="agents"> (excluded from the web, rendered in the export).
+  The snippet import is safe ONLY because the usage sits inside the for="humans"
+  block: Mintlify inlines a snippet's full source into the export when the
+  component appears in exported content, and drops it when all usages are hidden
+  (verified on a preview deploy). Keep the twin in sync when editing.
+*/}
+
+<Visibility for="humans">
+  Scan the QR code below with your phone (you must have World App installed).
+
+  <div className="flex justify-center my-4">
+    <QRCodeGenerator
+      hideInput={true}
+      hideDetails={true}
+      appId="app_dfbe55706a640c82dce839bb0ecae74d"
+      baseUrl="https://world.org/mini-app"
+    />
+  </div>
+</Visibility>
+
+<Visibility for="agents">
+  Open [https://world.org/mini-app?app_id=app_dfbe55706a640c82dce839bb0ecae74d](https://world.org/mini-app?app_id=app_dfbe55706a640c82dce839bb0ecae74d) on a phone with World App installed (the docs page renders this link as a QR code).
+</Visibility>
+
+<table>
+  <thead>
+    <tr>
+      <th className="p-2 text-left align-middle">Command</th>
+      <th className="p-2 text-left align-middle">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td className="p-2 align-middle">Pay</td>
+      <td className="p-2 align-middle">Request a payment inside World App</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Wallet Auth</td>
+      <td className="p-2 align-middle">Authenticate with Sign-In with Ethereum</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Send Transaction</td>
+      <td className="p-2 align-middle">Submit one or more World Chain transactions</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Sign Message</td>
+      <td className="p-2 align-middle">Sign an EIP-191 personal message</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Sign Typed Data</td>
+      <td className="p-2 align-middle">Sign an EIP-712 typed payload</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Share Contacts</td>
+      <td className="p-2 align-middle">Open the World App contact picker</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Request Permission</td>
+      <td className="p-2 align-middle">Request notifications or microphone access</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Get Permissions</td>
+      <td className="p-2 align-middle">Read current mini app permission state</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Send Haptic Feedback</td>
+      <td className="p-2 align-middle">Trigger native haptic feedback</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Share</td>
+      <td className="p-2 align-middle">Open the native share sheet</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">World Chat</td>
+      <td className="p-2 align-middle">Open World Chat with a prefilled message</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Attestation</td>
+      <td className="p-2 align-middle">Request an app attestation token</td>
+    </tr>
+    <tr>
+      <td className="p-2 align-middle">Close Mini App</td>
+      <td className="p-2 align-middle">Programmatically close the mini app</td>
+    </tr>
+  </tbody>
+</table>
+
+Push notifications are documented separately in [Send Notifications](/mini-apps/commands/how-to-send-notifications), since they combine permission handling with Developer Portal setup.

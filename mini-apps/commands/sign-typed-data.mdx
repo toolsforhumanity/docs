@@ -1,0 +1,111 @@
+---
+title: "Sign Typed Data"
+description: "Sign EIP-712 typed data using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.signTypedData()` to request an EIP-712 signature from the user's wallet.
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  MiniAppSignTypedDataSuccessPayload,
+  MiniKitSignTypedDataOptions,
+} from "@worldcoin/minikit-js/commands";
+
+export async function signTypedData() {
+  const input = {
+    primaryType: "Mail",
+    domain: {
+      name: "Example",
+      version: "1",
+      chainId: 480,
+    },
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+      ],
+      Mail: [
+        { name: "contents", type: "string" },
+      ],
+    },
+    message: {
+      contents: "Hello world",
+    },
+  } satisfies MiniKitSignTypedDataOptions;
+
+  const result: CommandResultByVia<MiniAppSignTypedDataSuccessPayload> =
+    await MiniKit.signTypedData(input);
+
+  console.log(result.data.signature);
+}
+```
+
+```ts title="Type"
+type MiniKitSignTypedDataOptions = {
+  types: TypedData;
+  primaryType: string;
+  message: Record<string, unknown>;
+  domain?: TypedDataDomain;
+  chainId?: number;
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type SignTypedDataResponse =
+  | {
+      executedWith: "minikit" | "wagmi";
+      data: {
+        status: "success";
+        version: number;
+        signature: string;
+        address: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1,
+    "signature": "0xabcdef1234567890",
+    "address": "0x1234567890123456789012345678901234567890"
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `invalid_operation` | The request contains an invalid operation |
+| `user_rejected` | The user rejected the request |
+| `input_error` | The payload is invalid |
+| `simulation_failed` | Simulation failed before signing |
+| `generic_error` | Unexpected failure |
+| `disallowed_operation` | The operation is not allowed |
+| `invalid_contract` | The contract or domain is invalid |
+| `malicious_operation` | The request was flagged as malicious |
