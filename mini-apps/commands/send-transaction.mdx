@@ -5,13 +5,13 @@ description: "Send one or more World Chain transactions using the unified MiniKi
 "twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
 ---
 
-**Breaking Changes in MiniKit v2**: 
+**Breaking Changes in MiniKit v2**:
 - SignatureTransfer is no longer supported. Please use Allowance Transfers documented below.
 - Standard ERC-20 `approve()` calls now work in mini apps. Approval will be automatically revoked after the transaction.
 
 ## Permit2 Allowance Transfers (Recommended)
 
-[Allowance transfers](https://docs.uniswap.org/contracts/permit2/reference/allowance-transfer#approve) are the recommended method for moving tokens in mini apps. World App automatically approves tokens to Permit2, so you can bundle the Permit2 approval and your contract call in a single `sendTransaction` for a better UX. 
+[Allowance transfers](https://docs.uniswap.org/contracts/permit2/reference/allowance-transfer#approve) are the recommended method for moving tokens in mini apps. World App automatically approves tokens to Permit2, so you can bundle the Permit2 approval and your contract call in a single `sendTransaction` for a better UX.
 Expiration should always be set to 0 as the approval will be consumed in the same transaction.
 
 
@@ -169,8 +169,8 @@ type SendTransactionResponse =
 ## Confirming the User Operation
 
 The command resolves as soon as the user operation is
-submitted, so the first identifier you receive is `userOpHash`. 
-You can either use the `@worldcoin/minikit-react` hook or poll the Developer Portal 
+submitted, so the first identifier you receive is `userOpHash`.
+You can either use the `@worldcoin/minikit-react` hook or poll the Developer Portal
 to check when the user operation is mined and get the final `transaction_hash`.
 
 <CodeGroup>

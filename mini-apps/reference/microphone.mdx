@@ -8,15 +8,15 @@ title: Microphone
 Microphone is only available from World App 2.8.85 and MiniKit 1.9.6.
 </Note>
 
-Microphone uses the standard web api [Navigator.mediaDevices](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/mediaDevices). 
+Microphone uses the standard web api [Navigator.mediaDevices](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/mediaDevices).
 These two conditions must be met in order to use the microphone:
 - The user must grant permission to your mini app to use the microphone.
 - The user must grant permission to World App to use the microphone.
 
 ## Using the microphone
-Request permission from the user to enable microphone for your mini app with the [request permission command](/mini-apps/commands/request-permission). 
-- If you receive a `world_app_permission_not_enabled` or `permission_disabled` error code, you must prompt the user to enable microphone for World App first. 
-This can be done by simply trying to start recording. 
+Request permission from the user to enable microphone for your mini app with the [request permission command](/mini-apps/commands/request-permission).
+- If you receive a `world_app_permission_not_enabled` or `permission_disabled` error code, you must prompt the user to enable microphone for World App first.
+This can be done by simply trying to start recording.
 - The microphone will automatically be turned off if the user closes your mini app or World App.
 
 ```tsx
