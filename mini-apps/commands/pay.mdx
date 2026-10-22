@@ -1,8 +1,8 @@
 ---
 title: "Pay"
 description: "Request a payment from the user"
-"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
-"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
 ---
 
 This command is an abstraction for a simple transfer. This shouldn't be used outside of World App. Pay supports WLD and all local stablecoins.
@@ -43,12 +43,16 @@ export async function sendPayment() {
   const result: CommandResultByVia<PayResult, PayResult, "minikit"> =
     await MiniKit.pay(input);
 
+  if (result.executedWith !== "minikit") {
+    return;
+  }
+
   await fetch("/api/confirm-payment", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(result.data),
+    body: JSON.stringify({ payload: result.data }),
   });
 }
 ```
@@ -116,6 +120,7 @@ type RequestBody = {
 
 export async function POST(req: NextRequest) {
   const { payload } = (await req.json()) as RequestBody;
+  const expected = await getPendingPayment(payload.reference);
 
   const response = await fetch(
     `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transactionId}?app_id=${process.env.APP_ID}&type=payment`,
@@ -127,10 +132,24 @@ export async function POST(req: NextRequest) {
     },
   );
 
+  if (!response.ok) {
+    return NextResponse.json({ verified: false }, { status: 502 });
+  }
+
   const transaction = await response.json();
-  return NextResponse.json(transaction);
+  const verified =
+    transaction.transaction_status === "mined" &&
+    transaction.reference === expected.reference &&
+    transaction.to.toLowerCase() === expected.to.toLowerCase() &&
+    transaction.token === expected.token &&
+    transaction.token_amount === expected.tokenAmount;
+
+  return NextResponse.json({ verified });
 }
 ```
+
+`getPendingPayment` must load the expected recipient, token, and amount from
+your server-side order data. Never accept those values from the client.
 
 ## Error Codes
 

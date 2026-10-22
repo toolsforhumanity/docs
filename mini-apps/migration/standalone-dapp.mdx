@@ -1,8 +1,8 @@
 ---
 title: "Upgrade to a Standalone Web App"
 description: "Convert your mini app into a standalone web app that works both inside World App and in any browser."
-"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
-"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
 ---
 
 MiniKit commands auto-detect the environment. Outside World App, they fall back to Wagmi.
@@ -148,9 +148,16 @@ if (result.executedWith === "minikit") {
 Commands without Wagmi fallbacks (`pay`, `shareContacts`, etc.) need a `fallback`:
 
 ```tsx
+import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
+
 const result = await MiniKit.pay({
-  amount: "1.00",
-  token: "USDC",
+  to: "0xRecipientAddress",
+  tokens: [
+    {
+      symbol: Tokens.USDC,
+      token_amount: tokenToDecimals(1, Tokens.USDC).toString(),
+    },
+  ],
   reference: "order-123",
   description: "Coffee",
   fallback: async () => myCustomPaymentFlow(),

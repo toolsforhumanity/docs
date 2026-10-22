@@ -1,7 +1,7 @@
 ---
 title: "DNA Send & Swap"
-"og:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
-"twitter:image": "https://raw.githubusercontent.com/worldcoin/developer-docs/main/images/docs/docs-meta.png"
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
 ---
 
 Generate deep links to the DNA app for quick actions like Swap and Send.
@@ -118,6 +118,7 @@ A string representing the complete deeplink URL to the DNA application with the 
 
 ```typescript
 const deeplinkUrl = getDNADeeplinkUrl({
+  tab: "send",
   fromToken: "0x79A02482A880bCE3F13e09Da970dC34db4CD24d1",
   toToken: "0x4200000000000000000000000000000000000006",
   recipientAddress: "0xRecipientAddressHere",
