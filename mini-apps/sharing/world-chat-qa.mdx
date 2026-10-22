@@ -60,21 +60,21 @@ function getWorldChatDeeplinkUrl({
   pay?: string | number;
   request?: string | number;
 }) {
-  let path = `/${username}/draft`;
+  let path = `/${encodeURIComponent(username)}/draft`;
 
   if (message) {
-    path += `?message=${message}`;
+    path += `?message=${encodeURIComponent(message)}`;
   } else if (pay !== undefined) {
     if (pay === "true" || pay === true) {
       path += `?pay`;
     } else {
-      path += `?pay=${pay}`; // Pay with amount
+      path += `?pay=${encodeURIComponent(String(pay))}`; // Pay with amount
     }
   } else if (request !== undefined) {
     if (request === "true" || request === true) {
       path += `?request`;
     } else {
-      path += `?request=${request}`; // Request with amount
+      path += `?request=${encodeURIComponent(String(request))}`; // Request with amount
     }
   }
 

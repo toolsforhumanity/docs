@@ -115,7 +115,7 @@ type RequestBody = {
 export async function POST(req: NextRequest) {
   const { payload, nonce } = (await req.json()) as RequestBody;
 
-  if (nonce !== cookies().get("siwe")?.value) {
+  if (nonce !== (await cookies()).get("siwe")?.value) {
     return NextResponse.json(
       { isValid: false, error: "Invalid nonce" },
       { status: 400 },

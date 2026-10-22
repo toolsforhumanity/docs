@@ -37,7 +37,7 @@ Game mechanics tap into fundamental human psychology: our need for achievement, 
 
 ```typescript
 // Simple streak logic
-const updateStreak = (lastActive: string) => {
+const updateStreak = (lastActive: string, today: string, streak: number) => {
 	const daysSinceLastActive = getDaysDifference(lastActive, today)
 	return daysSinceLastActive === 1 ? streak + 1 : 1
 }

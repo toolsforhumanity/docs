@@ -64,10 +64,7 @@ export function getActionLink({ targetAppId, path, params }: ActionLinkProps) {
   let fullPath = path;
 
   if (Object.keys(params).length > 0) {
-    const paramParts = Object.entries(params).map(([key, value]) => {
-      return `${key}=${value}`;
-    });
-    fullPath += `?${paramParts.join("&")}`;
+    fullPath += `?${new URLSearchParams(params)}`;
   }
 
   const queryString = `${MAIN_ACTION_URL}?app_id=${targetAppId}&path=${encodeURIComponent(fullPath)}`;

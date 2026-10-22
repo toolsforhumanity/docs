@@ -16,10 +16,13 @@ Create server-side invite pages that work across all platforms:
 
 ```typescript
 // pages/invite.tsx
+import { useEffect } from "react";
+
 export default function InvitePage({ code }: { code: string }) {
 	useEffect(() => {
 		// Redirect to mini app
-		window.location.href = `https://world.org/mini-app?app_id=${YOUR_APP_ID}&path=${encodeURIComponent(`/invite?code=${code}`)}`
+		const path = `/invite?${new URLSearchParams({ code })}`;
+		window.location.href = `https://world.org/mini-app?app_id=${YOUR_APP_ID}&path=${encodeURIComponent(path)}`
 	}, [code])
 
 	return <div>Redirecting to mini app...</div>
