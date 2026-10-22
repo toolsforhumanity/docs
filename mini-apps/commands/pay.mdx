@@ -47,13 +47,18 @@ export async function sendPayment() {
     return;
   }
 
-  await fetch("/api/confirm-payment", {
+  const response = await fetch("/api/confirm-payment", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ payload: result.data }),
   });
+
+  const confirmation = await response.json();
+  if (!response.ok || !confirmation.verified) {
+    throw new Error("Payment could not be verified");
+  }
 }
 ```
 

@@ -17,9 +17,14 @@ Create server-side invite pages that work across all platforms:
 ```typescript
 // pages/invite.tsx
 import { useEffect } from "react";
+import { useRouter } from "next/router";
 
-export default function InvitePage({ code }: { code: string }) {
+export default function InvitePage() {
+	const { code } = useRouter().query;
+
 	useEffect(() => {
+		if (typeof code !== "string") return;
+
 		// Redirect to mini app
 		const path = `/invite?${new URLSearchParams({ code })}`;
 		window.location.href = `https://world.org/mini-app?app_id=${YOUR_APP_ID}&path=${encodeURIComponent(path)}`
@@ -48,7 +53,8 @@ Create a shareable link that includes the referral information:
 function generateInviteLink(userId: string): string {
   const baseUrl = "https://world.org/mini-app";
   const appId = "your_app_id";
-  const path = encodeURIComponent(`/invite?code=${userId}`);
+  const query = new URLSearchParams({ code: userId });
+  const path = encodeURIComponent(`/invite?${query}`);
 
   return `${baseUrl}?app_id=${appId}&path=${path}`;
 }
@@ -98,7 +104,6 @@ function handleReferral() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        newUserId: currentUser.id,
         referrerCode: refCode,
       }),
     });
@@ -112,16 +117,21 @@ Implement two-sided rewards that benefit both parties:
 
 ```typescript
 // api/process-referral.ts
-export async function processReferral(data: {
-  newUserId: string;
-  referrerCode: string;
-}) {
+export async function processReferral(
+  authenticatedUserId: string,
+  data: { referrerCode: string },
+) {
+  const newUserId = authenticatedUserId;
   const referrer = await getUserByCode(data.referrerCode);
   if (!referrer) {
     return { success: false, reason: "invalid_referrer" };
   }
 
-  const claimedBy = await claimReferral(data.newUserId, referrer.id);
+  if (referrer.id === newUserId) {
+    return { success: false, reason: "self_referral" };
+  }
+
+  const claimedBy = await claimReferral(newUserId, referrer.id);
   if (claimedBy !== referrer.id) {
     return { success: false, reason: "already_referred" };
   }
@@ -132,13 +142,13 @@ export async function processReferral(data: {
       type: "referral_bonus",
       amount: 100,
       reason: "Friend joined via your invite",
-      idempotencyKey: `referral:${data.newUserId}:referrer`,
+      idempotencyKey: `referral:${newUserId}:referrer`,
     }),
-    creditUser(data.newUserId, {
+    creditUser(newUserId, {
       type: "signup_bonus",
       amount: 50,
       reason: "Welcome bonus for joining via invite",
-      idempotencyKey: `referral:${data.newUserId}:referee`,
+      idempotencyKey: `referral:${newUserId}:referee`,
     }),
   ]);
 

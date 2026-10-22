@@ -114,8 +114,9 @@ type RequestBody = {
 
 export async function POST(req: NextRequest) {
   const { payload, nonce } = (await req.json()) as RequestBody;
+  const cookieStore = await cookies();
 
-  if (nonce !== (await cookies()).get("siwe")?.value) {
+  if (nonce !== cookieStore.get("siwe")?.value) {
     return NextResponse.json(
       { isValid: false, error: "Invalid nonce" },
       { status: 400 },
@@ -132,8 +133,13 @@ export async function POST(req: NextRequest) {
       // viemClient, — custom viem Client; defaults to a public Worldchain client
     );
 
+    if (!verification.isValid) {
+      return NextResponse.json({ isValid: false }, { status: 401 });
+    }
+
+    cookieStore.delete("siwe");
     return NextResponse.json({
-      isValid: verification.isValid,
+      isValid: true,
       address: verification.siweMessageData.address,
     });
   } catch (error) {
