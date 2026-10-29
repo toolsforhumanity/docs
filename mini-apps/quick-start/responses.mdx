@@ -1,0 +1,51 @@
+---
+title: "Responses"
+description: "Handle MiniKit command results with `{ executedWith, data }` and standard error handling."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Modern MiniKit commands are async methods on `MiniKit`. They resolve to a result object shaped like `{ executedWith, data }` and throw if the command fails.
+
+## Async Command Results
+
+Use `executedWith` to understand whether the command ran through World App, Wagmi, or a custom fallback.
+
+```tsx
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  MiniKitWalletAuthOptions,
+  WalletAuthResult,
+} from "@worldcoin/minikit-js/commands";
+
+async function signInWithWallet() {
+  const input = {
+    nonce: "randomnonce123",
+  } satisfies MiniKitWalletAuthOptions;
+
+  try {
+    const result: CommandResultByVia<WalletAuthResult> =
+      await MiniKit.walletAuth(input);
+
+    console.log(result.executedWith);
+    // "minikit" | "wagmi" | "fallback"
+
+    console.log(result.data.address);
+    console.log(result.data.signature);
+  } catch (error) {
+    console.error("Command failed", error);
+  }
+}
+```
+
+## What To Expect
+
+- `executedWith` tells you which runtime handled the command
+- `data` contains the success payload for that command
+- command-specific failures are thrown, so use `try/catch`
+- some commands still require backend verification even after a successful response, such as `walletAuth` and `pay`
+
+## Event Subscriptions
+
+For new 2.x command integrations, prefer `await MiniKit.<command>()`.

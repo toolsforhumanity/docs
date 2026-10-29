@@ -1,0 +1,103 @@
+---
+title: "Request Permission"
+description: "Request a mini app permission using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.requestPermission()` to ask the user for a permission such as notifications or microphone access.
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import {
+  Permission,
+  type CommandResultByVia,
+  type MiniAppRequestPermissionSuccessPayload,
+  type MiniKitRequestPermissionOptions,
+} from "@worldcoin/minikit-js/commands";
+
+export async function requestNotifications() {
+  const input = {
+    permission: Permission.Notifications,
+  } satisfies MiniKitRequestPermissionOptions;
+
+  const result: CommandResultByVia<
+    MiniAppRequestPermissionSuccessPayload,
+    MiniAppRequestPermissionSuccessPayload,
+    "minikit"
+  > = await MiniKit.requestPermission(input);
+
+  console.log(result.data.permission);
+}
+```
+
+```ts title="Type"
+type MiniKitRequestPermissionOptions = {
+  permission: Permission;
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type RequestPermissionResponse =
+  | {
+      executedWith: "minikit";
+      data: {
+        status: "success";
+        version: number;
+        permission: "notifications" | "contacts" | "microphone";
+        timestamp: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1,
+    "permission": "notifications",
+    "timestamp": "2026-03-28T18:24:00.000Z"
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `user_rejected` | The user rejected the request |
+| `generic_error` | Unexpected failure |
+| `already_requested` | The permission prompt was already shown and rejected |
+| `permission_disabled` | The permission is disabled |
+| `already_granted` | The permission is already granted |
+| `unsupported_permission` | The permission is not supported |
+
+## Preview
+
+<div className="grid justify-items-center text-center">
+  <video className="m-auto" width="300" autoPlay muted loop playsInline>
+    <source
+      src="/images/docs/mini-apps/commands/notifications-command.mp4"
+      type="video/mp4"
+    />
+    Your browser does not support the video tag.
+  </video>
+</div>

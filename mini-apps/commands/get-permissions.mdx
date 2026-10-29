@@ -1,0 +1,90 @@
+---
+title: "Get Permissions"
+description: "Read current mini app permission settings using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.getPermissions()` to read the current permission state for the mini app.
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  MiniAppGetPermissionsSuccessPayload,
+  MiniKitGetPermissionsOptions,
+} from "@worldcoin/minikit-js/commands";
+
+export async function getPermissions() {
+  const input = {} satisfies MiniKitGetPermissionsOptions;
+
+  const result: CommandResultByVia<
+    MiniAppGetPermissionsSuccessPayload,
+    MiniAppGetPermissionsSuccessPayload,
+    "minikit"
+  > = await MiniKit.getPermissions(input);
+
+  console.log(result.data.permissions);
+}
+```
+
+```ts title="Type"
+type MiniKitGetPermissionsOptions = {
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type GetPermissionsResponse =
+  | {
+      executedWith: "minikit";
+      data: {
+        status: "success";
+        version: number;
+        permissions: {
+          notifications?: any;
+          contacts?: any;
+          microphone?: any;
+        };
+        timestamp: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1,
+    "permissions": {
+      "notifications": true,
+      "contacts": false,
+      "microphone": true
+    },
+    "timestamp": "2026-03-28T18:24:00.000Z"
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `generic_error` | Unexpected failure |

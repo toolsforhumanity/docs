@@ -1,0 +1,196 @@
+---
+title: "Wallet Authentication"
+description: "Authenticate a user with Sign-In with Ethereum using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.walletAuth()` to authenticate a user with Sign-In with Ethereum inside World App.
+
+This is the recommended authentication flow for mini apps.
+
+## Basic Usage
+
+Generate the nonce on your backend. The nonce must be alphanumeric and at least 8 characters.
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  MiniKitWalletAuthOptions,
+  WalletAuthResult,
+} from "@worldcoin/minikit-js/commands";
+
+export async function signInWithWallet() {
+  const response = await fetch("/api/nonce");
+  const { nonce } = await response.json();
+
+  const input = {
+    nonce,
+    statement: "Sign in to Example Mini App",
+    expirationTime: new Date(Date.now() + 1000 * 60 * 60),
+    // requestId: "optional-tracking-id",
+    // notBefore: new Date(),
+  } satisfies MiniKitWalletAuthOptions;
+
+  const result: CommandResultByVia<WalletAuthResult> =
+    await MiniKit.walletAuth(input);
+
+  if (result.executedWith === "fallback") {
+    return;
+  }
+
+  await fetch("/api/complete-siwe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      payload: result.data,
+      nonce,
+    }),
+  });
+}
+```
+
+```ts title="Type"
+type MiniKitWalletAuthOptions = {
+  nonce: string;
+  statement?: string;
+  expirationTime?: Date;
+  notBefore?: Date;
+  requestId?: string;
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type WalletAuthResponse =
+  | {
+      executedWith: "minikit" | "wagmi";
+      data: {
+        address: string;
+        message: string;
+        signature: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "address": "0x1234567890123456789012345678901234567890",
+    "message": "example.com wants you to sign in with your Ethereum account",
+    "signature": "0xabcdef1234567890"
+  }
+}
+```
+</CodeGroup>
+
+## Backend Verification
+
+Always verify the returned SIWE payload on your backend.
+
+```ts
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import type { MiniAppWalletAuthSuccessPayload } from "@worldcoin/minikit-js/commands";
+import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
+
+type RequestBody = {
+  payload: MiniAppWalletAuthSuccessPayload;
+  nonce: string;
+};
+
+export async function POST(req: NextRequest) {
+  const { payload, nonce } = (await req.json()) as RequestBody;
+  const cookieStore = await cookies();
+
+  if (nonce !== cookieStore.get("siwe")?.value) {
+    return NextResponse.json(
+      { isValid: false, error: "Invalid nonce" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    // Optional: pass statement and requestId for additional server-side validation
+    const verification = await verifySiweMessage(
+      payload,
+      nonce,
+      // statement,  — validates the statement matches what you sent
+      // requestId,  — validates the request ID matches what you sent
+      // viemClient, — custom viem Client; defaults to a public Worldchain client
+    );
+
+    if (!verification.isValid) {
+      return NextResponse.json({ isValid: false }, { status: 401 });
+    }
+
+    cookieStore.delete("siwe");
+    return NextResponse.json({
+      isValid: true,
+      address: verification.siweMessageData.address,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        isValid: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 400 },
+    );
+  }
+}
+```
+
+## Options
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `nonce` | `string` | Yes | Alphanumeric, at least 8 characters |
+| `statement` | `string` | No | Human-readable statement included in the SIWE message |
+| `expirationTime` | `Date` | No | When the SIWE message expires |
+| `notBefore` | `Date` | No | SIWE message is not valid before this time |
+| `requestId` | `string` | No | Arbitrary ID for correlating the request on your backend |
+| `fallback` | `() => Promise<T>` | No | Custom fallback for non-World-App environments |
+
+## Notes
+
+- Use `MiniKit.user.walletAddress` after successful auth if you need cached user state
+- Use `MiniKit.getUserByAddress()` or `MiniKit.getUserByUsername()` to resolve username and profile metadata
+- Do not use World ID verification as a login substitute
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `malformed_request` | The SIWE request payload is invalid |
+| `user_rejected` | The user rejected the signature request |
+| `generic_error` | Unexpected failure |
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Preview
+
+<div className="grid justify-items-center text-center">
+  <video className="m-auto" width="300" autoPlay muted loop playsInline>
+    <source
+      src="/images/docs/mini-apps/commands/walletauth.mp4"
+      type="video/mp4"
+    />
+    Your browser does not support the video tag.
+  </video>
+</div>

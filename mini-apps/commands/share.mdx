@@ -1,0 +1,104 @@
+---
+title: "Share"
+description: "Open the native share sheet using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.share()` to open the native share sheet with text, links, or files.
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  MiniAppShareSuccessPayload,
+  MiniKitShareOptions,
+} from "@worldcoin/minikit-js/commands";
+
+export async function shareLink() {
+  const input = {
+    title: "Invite Link",
+    text: "Use this invite code to join my mini app",
+    url: "https://world.org",
+  } satisfies MiniKitShareOptions;
+
+  const result: CommandResultByVia<
+    MiniAppShareSuccessPayload,
+    MiniAppShareSuccessPayload,
+    "minikit"
+  > = await MiniKit.share(input);
+
+  console.log(result.data.shared_files_count);
+}
+```
+
+```ts title="Type"
+type MiniKitShareOptions = {
+  files?: File[];
+  title?: string;
+  text?: string;
+  url?: string;
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type ShareResponse =
+  | {
+      executedWith: "minikit";
+      data: {
+        status: "success";
+        version: number;
+        shared_files_count: number;
+        timestamp: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1,
+    "shared_files_count": 2,
+    "timestamp": "2026-03-28T18:24:00.000Z"
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `user_rejected` | The user rejected the share flow |
+| `generic_error` | Unexpected failure |
+| `invalid_file_name` | One or more file names are invalid |
+
+## Preview
+
+<div className="grid justify-items-center text-center">
+  <video className="m-auto" width="300" autoPlay muted loop playsInline>
+    <source
+      src="/images/docs/mini-apps/commands/share.mp4"
+      type="video/mp4"
+    />
+    Your browser does not support the video tag.
+  </video>
+</div>

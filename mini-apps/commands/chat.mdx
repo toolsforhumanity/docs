@@ -1,0 +1,101 @@
+---
+title: "World Chat"
+description: "Share a message through World Chat using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.chat()` to open World Chat with a prefilled message.
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  MiniAppChatSuccessPayload,
+  MiniKitChatOptions,
+} from "@worldcoin/minikit-js/commands";
+
+export async function shareToChat() {
+  const input = {
+    message: "Check out this mini app",
+    to: ["andy"],
+  } satisfies MiniKitChatOptions;
+
+  const result: CommandResultByVia<
+    MiniAppChatSuccessPayload,
+    MiniAppChatSuccessPayload,
+    "minikit"
+  > = await MiniKit.chat(input);
+
+  console.log(result.data.count);
+}
+```
+
+```ts title="Type"
+type MiniKitChatOptions = {
+  message: string;
+  to?: string[];
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type ChatResponse =
+  | {
+      executedWith: "minikit";
+      data: {
+        status: "success";
+        version: number;
+        count: number;
+        timestamp: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1,
+    "count": 2,
+    "timestamp": "2026-03-28T18:24:00.000Z"
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `user_rejected` | The user rejected the request |
+| `send_failed` | Sending the message failed |
+| `generic_error` | Unexpected failure |
+
+## Preview
+
+<div className="grid justify-items-center text-center">
+  <video className="m-auto" width="300" autoPlay muted loop playsInline>
+    <source
+      src="/images/docs/mini-apps/commands/chat.mp4"
+      type="video/mp4"
+    />
+    Your browser does not support the video tag.
+  </video>
+</div>

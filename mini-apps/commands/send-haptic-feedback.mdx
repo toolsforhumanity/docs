@@ -1,0 +1,101 @@
+---
+title: "Send Haptic Feedback"
+description: "Trigger haptic feedback using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.sendHapticFeedback()` to trigger native haptic feedback.
+
+## Haptic Types
+
+- **`"notification"`** — style: `"success"`, `"warning"`, or `"error"`
+- **`"impact"`** — style: `"light"`, `"medium"`, or `"heavy"`
+- **`"selection-changed"`** — no style needed
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Impact"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type { MiniKitSendHapticFeedbackOptions } from "@worldcoin/minikit-js/commands";
+
+export async function sendImpactHaptic() {
+  await MiniKit.sendHapticFeedback({
+    hapticsType: "impact",
+    style: "medium",
+  } satisfies MiniKitSendHapticFeedbackOptions);
+}
+```
+
+```tsx title="Selection Changed"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type { MiniKitSendHapticFeedbackOptions } from "@worldcoin/minikit-js/commands";
+
+export async function sendSelectionHaptic() {
+  await MiniKit.sendHapticFeedback({
+    hapticsType: "selection-changed",
+  } satisfies MiniKitSendHapticFeedbackOptions);
+}
+```
+
+```ts title="Type"
+type MiniKitSendHapticFeedbackOptions =
+  | {
+      hapticsType: "notification";
+      style: "error" | "success" | "warning";
+      fallback?: () => unknown;
+    }
+  | {
+      hapticsType: "impact";
+      style: "light" | "medium" | "heavy";
+      fallback?: () => unknown;
+    }
+  | {
+      hapticsType: "selection-changed";
+      fallback?: () => unknown;
+    };
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type SendHapticFeedbackResponse =
+  | {
+      executedWith: "minikit";
+      data: {
+        status: "success";
+        version: number;
+        timestamp: string;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1,
+    "timestamp": "2026-03-28T18:24:00.000Z"
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
+
+## Error Codes
+
+| Code | Meaning |
+| --- | --- |
+| `generic_error` | Unexpected failure |
+| `user_rejected` | The request was rejected |

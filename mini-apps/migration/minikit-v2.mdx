@@ -1,0 +1,74 @@
+---
+title: "MiniKit 2.0 Migration"
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+MiniKit 2.x consolidates command handling around async `MiniKit` methods and removes World ID verification from MiniKit.
+
+## Breaking Changes
+
+- World ID verification moved out of MiniKit and into [`@worldcoin/idkit`](https://docs.world.org/world-id/idkit/mini-apps)
+- Commands moved to top-level async methods on `MiniKit` instead of `commandsAsync` and `commands`
+- Response interface changed to `{ executedWith, data }`
+- Types and helpers moved to `@worldcoin/minikit-js/commands`, `@worldcoin/minikit-js/siwe`, and `@worldcoin/minikit-js/address-book`
+- `walletAuth` nonce validation is stricter and expects an alphanumeric nonce without hyphens
+- `sendTransaction` now takes encoded calldata `transactions` and returns `userOpHash`
+  - Permit2 switched from SignatureTransfer to AllowanceTransfer
+  - Standard ERC-20 `approve()` calls are now allowed, and approval will be revoked after the transaction
+
+## World ID Changes
+
+Any old `MiniKit.verify` or `MiniKit.commandsAsync.verify` flow should be replaced with IDKit. MiniKit 2.x only owns mini app commands. See [IDKit for Mini Apps](https://docs.world.org/world-id/idkit/mini-apps) for the current integration shape.
+
+## Old To New
+
+```ts
+// 1.x
+MiniKit.commands.signMessage({ message: "hello" });
+await MiniKit.commandsAsync.walletAuth({ nonce });
+await MiniKit.commandsAsync.sendTransaction({ transaction: [tx] });
+
+// 2.x
+await MiniKit.signMessage({ message: "hello" });
+await MiniKit.walletAuth({ nonce });
+await MiniKit.sendTransaction({
+  chainId: 480,
+  transactions: [{ to, data, value }],
+});
+```
+
+## Import Path Changes
+
+```ts
+import type { MiniKitSendHapticFeedbackOptions } from "@worldcoin/minikit-js/commands";
+import { getIsUserVerified } from "@worldcoin/minikit-js/address-book";
+import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
+```
+
+## `walletAuth` Changes
+- Validation now requires you to strip hyphens from UUID-based nonces
+
+```ts
+const nonce = crypto.randomUUID().replace(/-/g, "");
+```
+
+## `sendTransaction` Migration
+
+- No longer uses abi encoding and instead expects pre-encoded calldata in the `transactions` array
+- Poll transaction progress with `userOpHash`
+
+```ts
+const result = await MiniKit.sendTransaction({
+  chainId: 480,
+  transactions: [
+    {
+      to: "0x...",
+      data: "0x...",
+      value: "0x0",
+    },
+  ],
+});
+
+console.log(result.data.userOpHash);
+```

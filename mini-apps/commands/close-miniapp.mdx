@@ -1,0 +1,72 @@
+---
+title: "Close Mini App"
+description: "Programmatically close the mini app using the unified MiniKit API."
+"og:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+"twitter:image": "https://raw.githubusercontent.com/toolsforhumanity/docs/main/images/docs/docs-meta.png"
+---
+
+Use `MiniKit.closeMiniApp()` to programmatically close the mini app.
+
+## Basic Usage
+
+<CodeGroup>
+```tsx title="Example"
+import { MiniKit } from "@worldcoin/minikit-js";
+import type {
+  CommandResultByVia,
+  CloseMiniAppResult,
+  MiniKitCloseMiniAppOptions,
+} from "@worldcoin/minikit-js/commands";
+
+export async function closeMiniApp() {
+  const input = {} satisfies MiniKitCloseMiniAppOptions;
+
+  const result: CommandResultByVia<
+    CloseMiniAppResult,
+    CloseMiniAppResult,
+    "minikit"
+  > = await MiniKit.closeMiniApp(input);
+
+  return result.data.status;
+}
+```
+
+```ts title="Type"
+type MiniKitCloseMiniAppOptions = {
+  fallback?: () => unknown;
+};
+```
+</CodeGroup>
+
+## Result
+
+<CodeGroup>
+```ts title="Type"
+type CloseMiniAppResponse =
+  | {
+      executedWith: "minikit";
+      data: {
+        status: "success";
+        version: number;
+      };
+    }
+  | {
+      executedWith: "fallback";
+      data: unknown;
+    };
+```
+
+```json title="Example"
+{
+  "executedWith": "minikit",
+  "data": {
+    "status": "success",
+    "version": 1
+  }
+}
+```
+</CodeGroup>
+
+## Fallback Behavior
+
+Define a custom fallback in the command payload for support outside mini apps.
